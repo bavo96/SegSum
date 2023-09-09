@@ -1,0 +1,8 @@
+__pycache__
+data/
+visualize/
+trained_model/
+Summaries/
+evaluation/
+inference/pretrained_models/
+
