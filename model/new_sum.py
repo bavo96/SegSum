@@ -17,7 +17,6 @@ class Sum(nn.Module):
         :param int block_size: The size of the blocks utilized inside the attention matrix.
         """
         super(Sum, self).__init__()
-        print(block_size)
 
         self.attention = SelfAttention(
             input_size=input_size, output_size=output_size, block_size=block_size

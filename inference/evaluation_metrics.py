@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
-import numpy as np
 import csv
-from scipy.stats import spearmanr, kendalltau, rankdata
 from collections import Counter
+
+import numpy as np
+from scipy.stats import kendalltau, rankdata, spearmanr
 
 
 def evaluate_summary(predicted_summary, user_summary, eval_method):
-    """ Compare the predicted summary with the user defined one(s).
+    """Compare the predicted summary with the user defined one(s).
 
     :param np.ndarray predicted_summary: The generated summary from our model.
     :param np.ndarray user_summary: The user defined ground truth summaries (or summary).
@@ -16,29 +17,29 @@ def evaluate_summary(predicted_summary, user_summary, eval_method):
     max_len = max(len(predicted_summary), user_summary.shape[1])
     S = np.zeros(max_len, dtype=int)
     G = np.zeros(max_len, dtype=int)
-    S[:len(predicted_summary)] = predicted_summary
+    S[: len(predicted_summary)] = predicted_summary
 
     f_scores = []
     for user in range(user_summary.shape[0]):
-        G[:user_summary.shape[1]] = user_summary[user]
+        G[: user_summary.shape[1]] = user_summary[user]
         overlapped = S & G
-        
+
         # Compute precision, recall, f-score
-        precision = sum(overlapped)/sum(S)
-        recall = sum(overlapped)/sum(G)
-        if precision+recall == 0:
+        precision = sum(overlapped) / sum(S)
+        recall = sum(overlapped) / sum(G)
+        if precision + recall == 0:
             f_scores.append(0)
         else:
             f_scores.append(2 * precision * recall * 100 / (precision + recall))
 
-    if eval_method == 'max':
+    if eval_method == "max":
         return max(f_scores)
     else:
-        return sum(f_scores)/len(f_scores)
+        return sum(f_scores) / len(f_scores)
 
 
 def get_corr_coeff(pred_imp_scores, video, dataset):
-    """ Read users annotations (frame-level importance scores) for the `video` of the `dataset`* in use. Compare the
+    """Read users annotations (frame-level importance scores) for the `video` of the `dataset`* in use. Compare the
     multiple user annotations for the test video with the predicted frame-level importance scores of our CA-SUM for the
     same video, by computing the Spearman's rho and Kendall's tau correlation coefficients. It must be noted, that the
     calculated values are the average correlation coefficients over the multiple annotators.
@@ -56,7 +57,7 @@ def get_corr_coeff(pred_imp_scores, video, dataset):
         user = int(video.split("_")[-1])
 
         annot = list(csv.reader(annot_file, delimiter="\t"))
-        annotation_length = list(Counter(np.array(annot)[:, 0]).values())[user-1]
+        annotation_length = list(Counter(np.array(annot)[:, 0]).values())[user - 1]
         init = (user - 1) * annotation_length
         till = user * annotation_length
 
@@ -64,7 +65,9 @@ def get_corr_coeff(pred_imp_scores, video, dataset):
         for row in annot[init:till]:
             curr_user_score = row[2].split(",")
             curr_user_score = np.array([float(num) for num in curr_user_score])
-            curr_user_score = curr_user_score / curr_user_score.max(initial=-1)  # Normalize scores between 0 and 1
+            curr_user_score = curr_user_score / curr_user_score.max(
+                initial=-1
+            )  # Normalize scores between 0 and 1
             curr_user_score = curr_user_score[::15]
 
             user_scores.append(curr_user_score)
@@ -74,7 +77,9 @@ def get_corr_coeff(pred_imp_scores, video, dataset):
     for annot in range(len(user_scores)):
         true_user_score = user_scores[annot]
         curr_rho_coeff, _ = spearmanr(pred_imp_scores, true_user_score)
-        curr_tau_coeff, _ = kendalltau(rankdata(pred_imp_scores), rankdata(true_user_score))
+        curr_tau_coeff, _ = kendalltau(
+            rankdata(pred_imp_scores), rankdata(true_user_score)
+        )
         rho_coeff.append(curr_rho_coeff)
         tau_coeff.append(curr_tau_coeff)
 

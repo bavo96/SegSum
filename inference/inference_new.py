@@ -14,11 +14,11 @@ from os.path import isfile, join
 import h5py
 import numpy as np
 import torch
+
+from inference.evaluation_metrics import evaluate_summary, get_corr_coeff
+from inference.generate_summary_new import generate_summary
 # from model.summarizer import CA_SUM
 from model.new_sum import Sum
-
-from .evaluation_metrics import evaluate_summary, get_corr_coeff
-from .generate_summary_new import generate_summary
 
 eligible_datasets = ["TVSum"]
 
@@ -117,7 +117,7 @@ if __name__ == "__main__":
     l_fscore = []
 
     # Get raw features
-    raw_data_path = "../data/video_features.pickle"
+    raw_data_path = "./data/video_features.pickle"
     start = time.time()
     raw_video_features = pickle.load(
         open(raw_data_path, "rb"),
@@ -126,26 +126,32 @@ if __name__ == "__main__":
     print("Load raw features:", end)
 
     # Dataset path
-    dataset_path = f"../data/{dataset}/eccv16_dataset_{dataset.lower()}_google_pool5.h5"
+    dataset_path = f"./data/{dataset}/eccv16_dataset_{dataset.lower()}_google_pool5.h5"
     hdf = h5py.File(dataset_path, "r")  # Open hdf file
 
     for split_id in range(5):
         # Model data
         # model_path = f"./inference/pretrained_models/{dataset}/split{split_id}"
         # model_path = "./Summaries/exp1/reg0.6/SumMe/"
-        model_path = "../trained_model/"
-        model_file = [f for f in listdir(model_path) if isfile(join(model_path, f))]
-        model_full_path = join(model_path, model_file[-1])
-        print(model_full_path)
+        model_path = f"./trained_model/{split_id}/"
+        model_file = max(
+            [
+                int(f.split(".")[0].split("-")[1])
+                for f in listdir(model_path)
+                if isfile(join(model_path, f))
+            ]
+        )
+        model_full_path = join(model_path, f"epoch-{model_file}.pt")
+        # print("model's path:", model_full_path)
 
         # Read current split
-        split_file = f"../data/splits/{dataset.lower()}_splits.json"
+        split_file = f"./data/splits/{dataset.lower()}_splits.json"
         with open(split_file) as f:
             data = json.loads(f.read())
             test_keys = data[split_id]["test_keys"]
 
         # Create model with paper reported configuration
-        trained_model = Sum(input_size=2048, output_size=2048, block_size=30).to(device)
+        trained_model = Sum(input_size=2048, output_size=2048, block_size=2).to(device)
         # trained_model = CA_SUM(input_size=1024, output_size=1024, block_size=60).to(
         #     device
         # )
@@ -162,8 +168,7 @@ if __name__ == "__main__":
         l_fscore.append(f_score)
 
         print(
-            f"CA-SUM model trained for split: {split_id} achieved an F-score: {f_score:.2f}%",
-            end="",
+            f"CA-SUM model trained for split: {split_id} achieved an F-score: {f_score:.2f}%"
         )
         # if dataset not in eligible_datasets or not corr_coef:
         #     print("\n", end="")

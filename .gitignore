@@ -2,6 +2,7 @@ __pycache__
 data/
 visualize/
 trained_model/
+trained_model_temp/
 Summaries/
 evaluation/
 inference/pretrained_models/

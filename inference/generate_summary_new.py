@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
+import sys
+
 import numpy as np
 
-from .knapsack_implementation import knapSack
+sys.path.append("..")
+sys.path.append(".")
+
+from inference.knapsack_implementation import knapSack
 
 
 def generate_summary(all_shot_bound, all_scores, all_nframes):
