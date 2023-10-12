@@ -31,6 +31,15 @@ class TensorboardWriter(SummaryWriter):
         """
         self.add_scalar(name, loss, step_i)
 
+    def update_scalar(self, scalar, step_i, name="fscore"):
+        """Add scalar data to summary.
+
+        :param float loss: Value to save.
+        :param int step_i: Step value to record.
+        :param str name: Data identifier.
+        """
+        self.add_scalar(name, scalar, step_i)
+
     def update_histogram(self, values, step_i, name="hist"):
         """Add histogram to summary.
 

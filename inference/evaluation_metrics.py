@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 import csv
+import sys
 from collections import Counter
 
 import numpy as np
 from scipy.stats import kendalltau, rankdata, spearmanr
+
+np.set_printoptions(threshold=sys.maxsize)
 
 
 def evaluate_summary(predicted_summary, user_summary, eval_method):
@@ -19,23 +22,34 @@ def evaluate_summary(predicted_summary, user_summary, eval_method):
     G = np.zeros(max_len, dtype=int)
     S[: len(predicted_summary)] = predicted_summary
 
-    f_scores = []
+    # print(f"predicted: {S}")
+    results = []
     for user in range(user_summary.shape[0]):
         G[: user_summary.shape[1]] = user_summary[user]
+        # print(f"user: {G}")
         overlapped = S & G
 
         # Compute precision, recall, f-score
         precision = sum(overlapped) / sum(S)
         recall = sum(overlapped) / sum(G)
+        # Return tuple precision, recall, f-score
         if precision + recall == 0:
-            f_scores.append(0)
+            results.append((0, 0, 0))
         else:
-            f_scores.append(2 * precision * recall * 100 / (precision + recall))
+            results.append(
+                [
+                    precision * 100,
+                    recall * 100,
+                    (2 * precision * recall * 100 / (precision + recall)),
+                ]
+            )
+    results = np.array(results)
+    max_values = np.argmax(results, axis=0)
 
     if eval_method == "max":
-        return max(f_scores)
+        return results[max_values[2]]
     else:
-        return sum(f_scores) / len(f_scores)
+        return np.mean(results, axis=0)
 
 
 def get_corr_coeff(pred_imp_scores, video, dataset):

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import argparse
+import os
 import pprint
 from pathlib import Path
 
@@ -29,23 +30,43 @@ class Config(object):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         for k, v in kwargs.items():
             setattr(self, k, v)
+        # Define paths
+        self.split_path = os.path.join(
+            kwargs["root_data_path"],
+            "splits",
+            f"{kwargs['dataset_name'].lower()}_splits.json",
+        )
+        self.data_path = os.path.join(
+            kwargs["root_data_path"],
+            kwargs["dataset_name"],
+            f"eccv16_dataset_{kwargs['dataset_name'].lower()}_google_pool5.h5",
+        )
+        self.features_path = os.path.join(
+            kwargs["root_data_path"],
+            kwargs["dataset_name"],
+            f"{kwargs['dataset_name'].lower()}_video_features.pickle",
+        )
 
-        self.set_dataset_dir(self.reg_factor, self.video_type)
+        self.set_training_dir(self.reg_factor, self.dataset_name)
 
-    def set_dataset_dir(self, reg_factor=0.6, video_type="SumMe"):
+    def set_training_dir(self, reg_factor=0.6, dataset_name="SumMe"):
         """Function that sets as class attributes the necessary directories for logging important training information.
 
         :param float reg_factor: The utilized length regularization factor.
-        :param str video_type: The Dataset being used, SumMe or TVSum.
+        :param str dataset_name: The Dataset being used, SumMe or TVSum.
         """
         self.log_dir = save_dir.joinpath(
-            "reg" + str(reg_factor), video_type, "logs/split" + str(self.split_index)
+            "reg" + str(reg_factor), dataset_name, "logs/split" + str(self.split_index)
         )
         self.score_dir = save_dir.joinpath(
-            "reg" + str(reg_factor), video_type, "results/split" + str(self.split_index)
+            "reg" + str(reg_factor),
+            dataset_name,
+            "results/split" + str(self.split_index),
         )
         self.save_dir = save_dir.joinpath(
-            "reg" + str(reg_factor), video_type, "models/split" + str(self.split_index)
+            "reg" + str(reg_factor),
+            dataset_name,
+            "models/split" + str(self.split_index),
         )
 
     def __repr__(self):
@@ -71,20 +92,26 @@ def get_config(parse=True, **optional_kwargs):
         help="Mode for the configuration [train | test]",
     )
     parser.add_argument(
+        "--root_data_path",
+        type=str,
+        default="./data",
+        help="Path to training data",
+    )
+    parser.add_argument(
         "--verbose",
         type=str2bool,
         default="false",
         help="Print or not training messages",
     )
     parser.add_argument(
-        "--video_type", type=str, default="SumMe", help="Dataset to be used"
+        "--dataset_name", type=str, default="SumMe", help="Dataset to be used"
     )
 
     # Model
     parser.add_argument(
         "--input_size",
         type=int,
-        default=1024,
+        default=2048,
         help="Feature size expected in the input",
     )
     parser.add_argument(
@@ -105,10 +132,13 @@ def get_config(parse=True, **optional_kwargs):
 
     # Train
     parser.add_argument(
-        "--n_epochs", type=int, default=400, help="Number of training epochs"
+        "--n_epochs", type=int, default=200, help="Number of training epochs"
     )
     parser.add_argument(
-        "--batch_size", type=int, default=20, help="Size of each batch in training"
+        "--batch_size",
+        type=int,
+        default=20,
+        help="Size of each batch in training. Default: 20 videos/batch",
     )
     parser.add_argument(
         "--seed",
@@ -146,5 +176,6 @@ def get_config(parse=True, **optional_kwargs):
 
 if __name__ == "__main__":
     config = get_config()
+    print(config)
     # import ipdb
     # ipdb.set_trace()

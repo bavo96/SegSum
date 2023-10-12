@@ -16,8 +16,7 @@ import numpy as np
 import torch
 
 from inference.evaluation_metrics import evaluate_summary, get_corr_coeff
-from inference.generate_summary_new import generate_summary
-# from model.summarizer import CA_SUM
+from inference.generate_summary import generate_summary
 from model.new_sum import Sum
 
 eligible_datasets = ["TVSum"]
@@ -47,11 +46,35 @@ def inference(model, keys, eval_method, raw_video_features, hdf, dataset, corr_c
     :param str eval_method: The evaluation method in use {SumMe: max, TVSum: avg}.
     """
     model.eval()
-    video_fscores, video_rho, video_tau = [], [], []
+    video_precisions, video_recalls, video_fscores, video_rho, video_tau = (
+        [],
+        [],
+        [],
+        [],
+        [],
+    )
 
     for video in keys:
-        video_fullname = np.array(hdf.get(video + "/video_name")).astype("str").tolist()
-        frame_features = torch.squeeze(torch.stack(raw_video_features[video_fullname]))
+        if dataset == "SumMe":
+            video_fullname = (
+                np.array(hdf.get(video + "/video_name")).astype("str").tolist()
+            )
+        elif dataset == "TVSum":
+            frame2video = {}
+            video2index = {}
+            index2video = {}
+            for key in list(hdf.keys()):
+                nframes = int(np.array(hdf[key]["n_frames"]))
+                full_name = np.array(hdf[key]["n_frames"]).astype("str").tolist()
+                frame2video[nframes] = key
+
+            for k, v in raw_video_features.items():
+                video_fullname = k
+                video2index[video_fullname] = frame2video[v.shape[0]]
+                index2video[frame2video[v.shape[0]]] = video_fullname
+            video_fullname = index2video[video]
+
+        frame_features = raw_video_features[video_fullname]
 
         user_summary = np.array(hdf[f"{video}/user_summary"])
         n_frames = np.array(hdf[f"{video}/n_frames"])
@@ -69,13 +92,19 @@ def inference(model, keys, eval_method, raw_video_features, hdf, dataset, corr_c
         # change_point = [[item[0], item[-1]] for item in l_frame]
         # sb = torch.Tensor(change_point)
 
+        # print("inference...")
         with torch.no_grad():
-            # scores, _ = model(frame_features)  # [1, seq_len]
             scores = model(frame_features, sb)  # [1, seq_len]
+            # print(sb.shape, scores.shape, n_frames, user_summary.shape, eval_method)
+            # print(f"Segment shape: {scores.shape}")
             scores = scores.squeeze(0).cpu().numpy().tolist()
 
             summary = generate_summary([sb], [scores], [n_frames])[0]
-            f_score = evaluate_summary(summary, user_summary, eval_method)
+            precision, recall, f_score = evaluate_summary(
+                summary, user_summary, eval_method
+            )
+            video_precisions.append(precision)
+            video_recalls.append(recall)
             video_fscores.append(f_score)
 
             # print("length vid:", len(summary))
@@ -89,7 +118,7 @@ def inference(model, keys, eval_method, raw_video_features, hdf, dataset, corr_c
                 video_rho.append(rho)
                 video_tau.append(tau)
 
-    return np.mean(video_fscores)
+    return np.mean(video_precisions), np.mean(video_recalls), np.mean(video_fscores)
 
 
 if __name__ == "__main__":
@@ -110,14 +139,17 @@ if __name__ == "__main__":
     )
 
     args = vars(parser.parse_args())
+    # dataset = "TVSum"  # args["dataset"]
     dataset = "SumMe"  # args["dataset"]
     corr_coef = False  # args["corr_coef"]
 
     eval_metric = "avg" if dataset.lower() == "tvsum" else "max"
-    l_fscore = []
+    l_precision, l_recall, l_fscore = [], [], []
 
     # Get raw features
-    raw_data_path = "./data/video_features.pickle"
+    # raw_data_path = "./data/SumMe/formatted_video_features.pickle"
+    # raw_data_path = f"./data/{dataset}/{dataset.lower()}_video_features.pickle"
+    raw_data_path = f"./data/{dataset}/{dataset.lower()}_video_features.pickle"
     start = time.time()
     raw_video_features = pickle.load(
         open(raw_data_path, "rb"),
@@ -131,9 +163,9 @@ if __name__ == "__main__":
 
     for split_id in range(5):
         # Model data
-        # model_path = f"./inference/pretrained_models/{dataset}/split{split_id}"
         # model_path = "./Summaries/exp1/reg0.6/SumMe/"
-        model_path = f"./trained_model/{split_id}/"
+        # model_path = f"./inference/pretrained_models/{dataset}/split{split_id}"
+        model_path = f"./results/{dataset.lower()}_trained_model/{split_id}/"
         model_file = max(
             [
                 int(f.split(".")[0].split("-")[1])
@@ -156,7 +188,7 @@ if __name__ == "__main__":
         #     device
         # )
         trained_model.load_state_dict(torch.load(model_full_path))
-        f_score = inference(
+        precision, recall, f_score = inference(
             trained_model,
             test_keys,
             eval_metric,
@@ -165,6 +197,8 @@ if __name__ == "__main__":
             dataset,
             corr_coef,
         )
+        l_precision.append(precision)
+        l_recall.append(recall)
         l_fscore.append(f_score)
 
         print(
@@ -181,4 +215,6 @@ if __name__ == "__main__":
 
     print("Standard deviation:", np.std(l_fscore))
     print("Variance:", np.var(l_fscore))
-    print("Mean:", np.mean(l_fscore))
+    print("Mean F-Score:", np.mean(l_fscore))
+    print("Mean Precision:", np.mean(l_precision))
+    print("Mean Recall:", np.mean(l_recall))

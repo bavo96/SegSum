@@ -134,12 +134,17 @@ if __name__ == "__main__":
 
     final_user_len_seg = sorted(final_user_len_seg)
     (n, bins, patches) = plt.hist(final_user_len_seg, bins=40, label="hst")
+    print("a")
     print(n)
+    print("a")
     print(bins)
+    print("a")
     print(patches)
+    print("a")
     n_np, bins_np = np.histogram(final_len_seg, 10)
     print(n_np, bins_np)
-    plt.savefig("./visualize/hist.jpeg")
+    print("a")
+    # plt.savefig("./visualize/hist.jpeg")
 
 # if __name__ == "__main__":
 #     user_sum = [1, 2, 3, 4, 0, 0, 0, 0, 9, 10, 11, 12]

@@ -8,15 +8,16 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from inference.inference_new import inference
+from tqdm import tqdm, trange
+
+from inference.inference_data import inference
 # from model.summarizer import Sum
 from model.new_sum import Sum
-from tqdm import tqdm, trange
-from utils import TensorboardWriter
+from model.utils import TensorboardWriter
 
 
 class Solver(object):
-    def __init__(self, config=None, train_loader=None, test_loader=None):
+    def __init__(self, config=None, train_loader=None, test_loader=None, splits=None):
         """Class that Builds, Trains and Evaluates CA-SUM model."""
         # Initialize variables to None, to be safe
         self.model, self.optimizer, self.writer = None, None, None
@@ -24,6 +25,7 @@ class Solver(object):
         self.config = config
         self.train_loader = train_loader
         self.test_loader = test_loader
+        self.splits = splits
 
         # Set the seed for generating reproducible random numbers
         if self.config.seed is not None:
@@ -98,12 +100,12 @@ class Solver(object):
         if self.config.verbose:
             tqdm.write("Time to train the model...")
 
-        max_fscore = 0
+        max_precision, max_recall, max_fscore = 0, 0, 0
         max_epoch = -1
 
-        min_loss = 1000000000
-        min_epoch = -1
-        min_fscore = 0
+        # min_loss = 1000000000
+        # min_epoch = -1
+        # min_fscore = 0
 
         for epoch_i in trange(self.config.n_epochs, desc="Epoch", ncols=80):
             self.model.train()
@@ -120,9 +122,10 @@ class Solver(object):
                     self.config.batch_size, desc="Video", ncols=80, leave=False
                 ):
                     _, frame_features, change_point = next(iterator)
+                    # print(frame_features.shape)
                     frame_features = frame_features.squeeze(0).to(self.config.device)
+                    # print(frame_features.shape)
 
-                    # output, _ = self.model(frame_features)
                     output = self.model(frame_features, change_point)
                     loss = self.length_regularization_loss(output)
                     loss_history.append(loss.data)
@@ -142,53 +145,87 @@ class Solver(object):
             # Plot
             if self.config.verbose:
                 tqdm.write("Plotting...")
-            self.writer.update_loss(loss, epoch_i, "loss_epoch")
+            self.writer.update_loss(loss, epoch_i, "loss_train")
 
             # Compute fscore on testset
-            fscore = self.evaluate(epoch_i)
+            precision, recall, fscore = self.evaluate(epoch_i, mode="test")
+            precision_train, recall_train, fscore_train = self.evaluate(
+                epoch_i, mode="train"
+            )
 
-            if loss < min_loss:
-                min_loss = loss
-                min_epoch = epoch_i
-                min_fscore = fscore
-                print(
-                    f"Current maximum fscore by loss: epoch {max_epoch}({max_fscore:.2f}%)"
-                )
+            # Results on train dataset
+            self.writer.update_scalar(precision_train, epoch_i, "precision_train")
+            self.writer.update_scalar(recall_train, epoch_i, "recall_train")
+            self.writer.update_scalar(fscore_train, epoch_i, "fscore_train")
+
+            # Results on test dataset
+            self.writer.update_scalar(precision, epoch_i, "precision_test")
+            self.writer.update_scalar(recall, epoch_i, "recall_test")
+            self.writer.update_scalar(fscore, epoch_i, "fscore_test")
+
+            # if loss < min_loss:
+            #     min_loss = loss
+            #     min_epoch = epoch_i
+            #     min_fscore = fscore
+            #     print(
+            #         f"Current maximum fscore by loss: epoch {min_epoch}({min_fscore:.2f}%)"
+            #     )
 
             if fscore > max_fscore:
+                max_precision = precision
+                max_recall = recall
                 max_fscore = fscore
                 max_epoch = epoch_i
-                print(
-                    f"Current maximum fscore by test fscore: epoch {max_epoch}({max_fscore:.2f}%)"
-                )
+                # print(
+                #     f"Current maximum fscore by test fscore: epoch {max_epoch}({max_fscore:.2f}%)"
+                # )
 
                 # if not os.path.exists(self.config.save_dir):
                 #     os.makedirs(self.config.save_dir)
-                parent_path = f"./trained_model/{self.config.split_index}"
-                if not os.path.exists(parent_path):
-                    os.makedirs(parent_path)
-                ckpt_path = parent_path + f"/epoch-{epoch_i}.pt"
-                tqdm.write(f"Save parameters at {ckpt_path}")
-                torch.save(self.model.state_dict(), ckpt_path)
 
-        return max_epoch, max_fscore, min_epoch, min_loss, min_fscore
+                # parent_path = f"./trained_model/{self.config.split_index}"
+                # if not os.path.exists(parent_path):
+                #     os.makedirs(parent_path)
+                # ckpt_path = parent_path + f"/epoch-{epoch_i}.pt"
+                # tqdm.write(f"Save parameters at {ckpt_path}")
+                # torch.save(self.model.state_dict(), ckpt_path)
 
-    def evaluate(self, epoch_i):
+        # return max_epoch, max_fscore, min_epoch, min_loss, min_fscore
+        return (
+            max_epoch,
+            max_precision,
+            max_recall,
+            max_fscore,
+        )
+
+    def evaluate(self, epoch_i, mode="test"):
         """Saves the frame's importance scores for the test videos in json format.
 
         :param int epoch_i: The current training epoch.
         """
+        if self.config.dataset_name == "SumMe":
+            inference_method = "max"
+        elif self.config.dataset_name == "TVSum":
+            inference_method = "avg"
 
-        fscore = inference(
+        if mode == "train":
+            keys = self.splits[self.config.split_index][mode + "_keys"]
+        elif mode == "test":
+            keys = self.splits[self.config.split_index][mode + "_keys"]
+
+        precision, recall, fscore = inference(
             self.model,
-            self.test_loader.keys,
-            "max",
+            keys,
+            inference_method,
             self.test_loader.raw_video_features,
             self.test_loader.hdf,
-            "SumMe",
-            False,
+            self.test_loader.dataset_name,
+            corr_coef=False,
         )
-        return fscore
+
+        # print(f"F1 score on {mode} data: {fscore}")
+
+        return precision, recall, fscore
 
 
 if __name__ == "__main__":
