@@ -22,12 +22,16 @@ def evaluate_summary(predicted_summary, user_summary, eval_method):
     G = np.zeros(max_len, dtype=int)
     S[: len(predicted_summary)] = predicted_summary
 
+    # print(len(S))
     # print(f"predicted: {S}")
     results = []
     for user in range(user_summary.shape[0]):
         G[: user_summary.shape[1]] = user_summary[user]
-        # print(f"user: {G}")
+        # if user == 0:
+        #     print(len(G))
+        #     print(f"user: {G}")
         overlapped = S & G
+        # print(overlapped)
 
         # Compute precision, recall, f-score
         precision = sum(overlapped) / sum(S)
@@ -44,11 +48,15 @@ def evaluate_summary(predicted_summary, user_summary, eval_method):
                 ]
             )
     results = np.array(results)
-    max_values = np.argmax(results, axis=0)
+    # print("res:")
+    # print(results)
 
     if eval_method == "max":
-        return results[max_values[2]]
+        max_values = np.argmax(results, axis=0)
+        return results[max_values[2]], max_values[2]
     else:
+        # print("res mean:")
+        # print(np.mean(results, axis=0))
         return np.mean(results, axis=0)
 
 

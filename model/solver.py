@@ -8,6 +8,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.optim.lr_scheduler import ExponentialLR
 from tqdm import tqdm, trange
 
 from inference.inference_data import inference
@@ -56,6 +57,9 @@ class Solver(object):
                 lr=self.config.lr,
                 weight_decay=self.config.l2_req,
             )
+            # self.optimizer = optim.SGD(self.model.parameters(), lr=0.01, momentum=0.9)
+            # self.scheduler = ExponentialLR(self.optimizer, gamma=0.9)
+
             self.writer = TensorboardWriter(str(self.config.log_dir))
 
     @staticmethod
@@ -108,25 +112,31 @@ class Solver(object):
         # min_fscore = 0
 
         for epoch_i in trange(self.config.n_epochs, desc="Epoch", ncols=80):
+            # print(f"epoch: {epoch_i}")
             self.model.train()
 
             loss_history = []
+            # print(f"num train: {len(self.train_loader)}")
             num_batches = int(
                 len(self.train_loader) / self.config.batch_size
             )  # full-batch or mini batch
+            # print(f"num batch: {num_batches}")
             iterator = iter(self.train_loader)
-            for _ in trange(num_batches, desc="Batch", ncols=80, leave=False):
+            for batch_i in trange(num_batches, desc="Batch", ncols=80, leave=False):
                 self.optimizer.zero_grad()
+                # print(f"batch {batch_i}...")
 
-                for _ in trange(
+                for video_i in trange(
                     self.config.batch_size, desc="Video", ncols=80, leave=False
                 ):
+                    # print(f"video {video_i}...")
                     _, frame_features, change_point = next(iterator)
                     # print(frame_features.shape)
                     frame_features = frame_features.squeeze(0).to(self.config.device)
                     # print(frame_features.shape)
 
                     output = self.model(frame_features, change_point)
+                    # print(f"output: {output}")
                     loss = self.length_regularization_loss(output)
                     loss_history.append(loss.data)
                     loss.backward()
@@ -136,6 +146,7 @@ class Solver(object):
                     self.model.parameters(), self.config.clip
                 )
                 self.optimizer.step()
+                # self.scheduler.step()
 
             # Mean loss of each training step
             loss = torch.stack(loss_history).mean()
@@ -149,19 +160,19 @@ class Solver(object):
 
             # Compute fscore on testset
             precision, recall, fscore = self.evaluate(epoch_i, mode="test")
-            precision_train, recall_train, fscore_train = self.evaluate(
-                epoch_i, mode="train"
-            )
-
-            # Results on train dataset
-            self.writer.update_scalar(precision_train, epoch_i, "precision_train")
-            self.writer.update_scalar(recall_train, epoch_i, "recall_train")
-            self.writer.update_scalar(fscore_train, epoch_i, "fscore_train")
-
             # Results on test dataset
             self.writer.update_scalar(precision, epoch_i, "precision_test")
             self.writer.update_scalar(recall, epoch_i, "recall_test")
             self.writer.update_scalar(fscore, epoch_i, "fscore_test")
+
+            # # Compute fscore on trainset
+            # precision_train, recall_train, fscore_train = self.evaluate(
+            #     epoch_i, mode="train"
+            # )
+            # # Results on train dataset
+            # self.writer.update_scalar(precision_train, epoch_i, "precision_train")
+            # self.writer.update_scalar(recall_train, epoch_i, "recall_train")
+            # self.writer.update_scalar(fscore_train, epoch_i, "fscore_train")
 
             # if loss < min_loss:
             #     min_loss = loss
@@ -176,19 +187,13 @@ class Solver(object):
                 max_recall = recall
                 max_fscore = fscore
                 max_epoch = epoch_i
-                # print(
-                #     f"Current maximum fscore by test fscore: epoch {max_epoch}({max_fscore:.2f}%)"
-                # )
+                print(
+                    f"Current maximum fscore by test fscore: epoch {max_epoch}({max_fscore:.2f}%)"
+                )
 
-                # if not os.path.exists(self.config.save_dir):
-                #     os.makedirs(self.config.save_dir)
-
-                # parent_path = f"./trained_model/{self.config.split_index}"
-                # if not os.path.exists(parent_path):
-                #     os.makedirs(parent_path)
-                # ckpt_path = parent_path + f"/epoch-{epoch_i}.pt"
-                # tqdm.write(f"Save parameters at {ckpt_path}")
-                # torch.save(self.model.state_dict(), ckpt_path)
+                ckpt_path = os.path.join(self.config.model_dir, f"epoch-{epoch_i}.pt")
+                tqdm.write(f"Save parameters at {ckpt_path}")
+                torch.save(self.model.state_dict(), ckpt_path)
 
         # return max_epoch, max_fscore, min_epoch, min_loss, min_fscore
         return (

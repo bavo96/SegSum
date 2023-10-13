@@ -3,6 +3,7 @@ import sys
 
 import numpy as np
 
+np.set_printoptions(threshold=sys.maxsize)
 sys.path.append("..")
 sys.path.append(".")
 
@@ -25,36 +26,49 @@ def generate_summary(all_shot_bound, all_scores, all_nframes):
     for video_index in range(len(all_scores)):
         # Get shots' boundaries
         shot_bound = all_shot_bound[video_index]  # [number_of_shots, 2]
-        frame_init_scores = all_scores[video_index]
-        n_frames = all_nframes[video_index]
-
-        # Compute the importance scores for the initial frame sequence (not the sub-sampled one)
-        frame_scores = np.zeros(n_frames, dtype=np.float32)
         shot_bound = [[int(bound[0]), int(bound[1])] for bound in shot_bound]
-        for i, bound in enumerate(shot_bound):
-            frame_scores[bound[0] : bound[1]] = frame_init_scores[i]
-
-        # Compute shot-level importance scores by taking the average importance scores of all frames in the shot
-        shot_imp_scores = []
+        shot_scores = all_scores[video_index]  # score per segment
+        n_frames = all_nframes[video_index]  #
         shot_lengths = []
+        # print("info")
+        # print(shot_scores)
+        # print(len(shot_bound), len(shot_scores))
+        # print(n_frames)
+
+        # # Compute the importance scores for the initial frame sequence (not the sub-sampled one)
+        # frame_scores = np.zeros(n_frames, dtype=np.float32)
         for i, shot in enumerate(shot_bound):
+            # frame_scores[bound[0] : bound[1]] = shot_init_scores[i]
             length = shot[1] - shot[0] + 1
             shot_lengths.append(length)
-            shot_imp_scores.append(frame_init_scores[i])
 
+        # print(frame_scores)
+        # print(shot_bound[0])
+
+        # # Compute shot-level importance scores by taking the average importance scores of all frames in the shot
+        # shot_imp_scores = []
+        # shot_lengths = []
+        # for i, shot in enumerate(shot_bound):
+        #     length = shot[1] - shot[0] + 1
+        #     shot_lengths.append(length)
+        #     shot_imp_scores.append(shot_init_scores[i])
+        #
         # Select the best shots using the knapsack implementation
         final_shot = shot_bound[-1]
         # print(final_shot)
         final_max_length = int((final_shot[1] + 1) * 0.15)
 
         selected = knapSack(
-            final_max_length, shot_lengths, shot_imp_scores, len(shot_lengths)
+            final_max_length, shot_lengths, shot_scores, len(shot_lengths)
         )
 
         # Select all frames from each selected shot (by setting their value in the summary vector to 1)
         summary = np.zeros(final_shot[1] + 1, dtype=np.int8)
+        summary = np.zeros(n_frames, dtype=np.int8)
+        # print(selected)
         for shot in selected:
             summary[shot_bound[shot][0] : shot_bound[shot][1] + 1] = 1
+            # summary[shot_bound[shot][0] : shot_bound[shot][1]] = 1
 
         all_summaries.append(summary)
 

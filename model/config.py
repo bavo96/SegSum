@@ -2,11 +2,8 @@
 import argparse
 import os
 import pprint
-from pathlib import Path
 
 import torch
-
-save_dir = Path("./Summaries/exp1")
 
 
 def str2bool(v):
@@ -47,27 +44,39 @@ class Config(object):
             f"{kwargs['dataset_name'].lower()}_video_features.pickle",
         )
 
-        self.set_training_dir(self.reg_factor, self.dataset_name)
-
-    def set_training_dir(self, reg_factor=0.6, dataset_name="SumMe"):
+    def set_training_dir(self, seed=0, reg_factor=0.6, dataset_name="SumMe"):
         """Function that sets as class attributes the necessary directories for logging important training information.
 
         :param float reg_factor: The utilized length regularization factor.
         :param str dataset_name: The Dataset being used, SumMe or TVSum.
         """
-        self.log_dir = save_dir.joinpath(
-            "reg" + str(reg_factor), dataset_name, "logs/split" + str(self.split_index)
-        )
-        self.score_dir = save_dir.joinpath(
+        self.log_dir = os.path.join(
+            self.root_results_path,
             "reg" + str(reg_factor),
             dataset_name,
-            "results/split" + str(self.split_index),
+            str(seed),
+            "logs/split" + str(self.split_index),
         )
-        self.save_dir = save_dir.joinpath(
+        # self.score_dir = save_dir.joinpath(
+        #     "reg" + str(reg_factor),
+        #     dataset_name,
+        #     seed,
+        #     "results/split" + str(self.split_index),
+        # )
+        self.model_dir = os.path.join(
+            self.root_results_path,
             "reg" + str(reg_factor),
             dataset_name,
+            str(seed),
             "models/split" + str(self.split_index),
         )
+
+        if not os.path.exists(self.model_dir):
+            os.makedirs(self.model_dir)
+        if not os.path.exists(self.log_dir):
+            os.makedirs(self.log_dir)
+        print(self.model_dir)
+        print(self.log_dir)
 
     def __repr__(self):
         """Pretty-print configurations in alphabetical order."""
@@ -96,6 +105,12 @@ def get_config(parse=True, **optional_kwargs):
         type=str,
         default="./data",
         help="Path to training data",
+    )
+    parser.add_argument(
+        "--root_results_path",
+        type=str,
+        default="./Summaries/",
+        help="Path to training resutls",
     )
     parser.add_argument(
         "--verbose",

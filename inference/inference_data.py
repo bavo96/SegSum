@@ -36,6 +36,12 @@ def str2bool(v):
         raise argparse.ArgumentTypeError("Boolean value expected.")
 
 
+def divide_chunks(l, n):
+    # looping till length l
+    for i in range(0, len(l), n):
+        yield l[i : i + n]
+
+
 def inference(model, keys, eval_method, raw_video_features, hdf, dataset, corr_coef):
     """Used to inference a pretrained `model` on the `keys` test videos, based on the `eval_method` criterion; using
     the dataset located in `data_path'.
@@ -54,7 +60,10 @@ def inference(model, keys, eval_method, raw_video_features, hdf, dataset, corr_c
         [],
     )
 
+    video_segments_scores = {}
+
     for video in keys:
+        ## Get videos' names
         if dataset == "SumMe":
             video_fullname = (
                 np.array(hdf.get(video + "/video_name")).astype("str").tolist()
@@ -78,17 +87,11 @@ def inference(model, keys, eval_method, raw_video_features, hdf, dataset, corr_c
 
         user_summary = np.array(hdf[f"{video}/user_summary"])
         n_frames = np.array(hdf[f"{video}/n_frames"])
-
         sb = torch.Tensor(np.array(hdf[f"{video}/change_points"]))
 
         # # Custom sb
-        # def divide_chunks(l, n):
-        #     # looping till length l
-        #     for i in range(0, len(l), n):
-        #         yield l[i : i + n]
-        # num_frame = frame_features.shape[0]
-        # l_frame = [i for i in range(num_frame)]
-        # l_frame = list(divide_chunks(l_frame, 30))
+        # l_frame = [i for i in range(n_frames)]
+        # l_frame = list(divide_chunks(l_frame, 60))
         # change_point = [[item[0], item[-1]] for item in l_frame]
         # sb = torch.Tensor(change_point)
 
@@ -98,11 +101,21 @@ def inference(model, keys, eval_method, raw_video_features, hdf, dataset, corr_c
             # print(sb.shape, scores.shape, n_frames, user_summary.shape, eval_method)
             # print(f"Segment shape: {scores.shape}")
             scores = scores.squeeze(0).cpu().numpy().tolist()
+            # print(scores)
 
             summary = generate_summary([sb], [scores], [n_frames])[0]
-            precision, recall, f_score = evaluate_summary(
-                summary, user_summary, eval_method
-            )
+            video_segments_scores[video_fullname] = summary
+            if dataset == "SumMe":
+                (precision, recall, f_score), best_user = evaluate_summary(
+                    summary, user_summary, eval_method
+                )
+                video_segments_scores[f"best_user_{video_fullname}"] = best_user
+                # print(f"Score for {video_fullname}: ", precision, recall, f_score)
+            elif dataset == "TVSum":
+                precision, recall, f_score = evaluate_summary(
+                    summary, user_summary, eval_method
+                )
+
             video_precisions.append(precision)
             video_recalls.append(recall)
             video_fscores.append(f_score)
@@ -117,6 +130,10 @@ def inference(model, keys, eval_method, raw_video_features, hdf, dataset, corr_c
                 )
                 video_rho.append(rho)
                 video_tau.append(tau)
+
+    # Save scores to pickle
+    with open(f"./analyze/{dataset.lower()}_video_scores.pickle", "wb") as handle:
+        pickle.dump(video_segments_scores, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     return np.mean(video_precisions), np.mean(video_recalls), np.mean(video_fscores)
 
@@ -142,17 +159,19 @@ if __name__ == "__main__":
     # dataset = "TVSum"  # args["dataset"]
     dataset = "SumMe"  # args["dataset"]
     corr_coef = False  # args["corr_coef"]
-
     eval_metric = "avg" if dataset.lower() == "tvsum" else "max"
+    print(f"Dataset: {dataset}, eval_metric: {eval_metric}")
+
     l_precision, l_recall, l_fscore = [], [], []
 
     # Get raw features
-    # raw_data_path = "./data/SumMe/formatted_video_features.pickle"
-    # raw_data_path = f"./data/{dataset}/{dataset.lower()}_video_features.pickle"
-    raw_data_path = f"./data/{dataset}/{dataset.lower()}_video_features.pickle"
+    raw_video_features_path = (
+        f"./data/{dataset}/{dataset.lower()}_video_features.pickle"
+    )
+    print(raw_video_features_path)
     start = time.time()
     raw_video_features = pickle.load(
-        open(raw_data_path, "rb"),
+        open(raw_video_features_path, "rb"),
     )
     end = time.time() - start
     print("Load raw features:", end)
@@ -163,9 +182,11 @@ if __name__ == "__main__":
 
     for split_id in range(5):
         # Model data
-        # model_path = "./Summaries/exp1/reg0.6/SumMe/"
+        model_path = f"./Summaries/reg0.15/{dataset}/1996/models/split{split_id}/"
         # model_path = f"./inference/pretrained_models/{dataset}/split{split_id}"
-        model_path = f"./results/{dataset.lower()}_trained_model/{split_id}/"
+        # model_path = f"./results/{dataset.lower()}_trained_model/best_model/{split_id}/"
+        # model_path = f"./results/{dataset.lower()}_trained_model/{split_id}/"
+        print(model_path)
         model_file = max(
             [
                 int(f.split(".")[0].split("-")[1])
@@ -183,7 +204,7 @@ if __name__ == "__main__":
             test_keys = data[split_id]["test_keys"]
 
         # Create model with paper reported configuration
-        trained_model = Sum(input_size=2048, output_size=2048, block_size=2).to(device)
+        trained_model = Sum(input_size=2048, output_size=2048, block_size=4).to(device)
         # trained_model = CA_SUM(input_size=1024, output_size=1024, block_size=60).to(
         #     device
         # )
@@ -215,6 +236,6 @@ if __name__ == "__main__":
 
     print("Standard deviation:", np.std(l_fscore))
     print("Variance:", np.var(l_fscore))
-    print("Mean F-Score:", np.mean(l_fscore))
     print("Mean Precision:", np.mean(l_precision))
     print("Mean Recall:", np.mean(l_recall))
+    print("Mean F-Score:", np.mean(l_fscore))

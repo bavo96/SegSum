@@ -54,7 +54,7 @@ class Sum(nn.Module):
         # # Generate custom change point
         # num_frame = frame_features.shape[0]
         # l_frame = [i for i in range(num_frame)]
-        # l_frame = list(self.divide_chunks(l_frame, 30))
+        # l_frame = list(self.divide_chunks(l_frame, 60))
         # change_point = [[item[0], item[-1]] for item in l_frame]
         # change_point = torch.Tensor(change_point)
 
