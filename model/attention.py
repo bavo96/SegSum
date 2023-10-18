@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-debug = False
+debug = True
 
 
 class SelfAttention(nn.Module):
@@ -66,10 +66,10 @@ class SelfAttention(nn.Module):
         x_unit = F.normalize(x, p=2, dim=1)
         if debug:
             print(x_unit)
-        similarity = x_unit @ x_unit.t()
+        similarity = x_unit @ x_unit.t()  # dot product
         if debug:
             print("sim:", similarity.shape)
-        diversity = 1 - similarity
+        diversity = 1 - similarity  # raw diversity matrix
         if debug:
             print("diver:", diversity.shape)
 
@@ -83,20 +83,25 @@ class SelfAttention(nn.Module):
             print(V.shape)
 
         energies = torch.matmul(Q, K.transpose(1, 0))
-        att_weights = self.softmax(energies)
+        att_weights = self.softmax(energies)  # attention matrix
+        print(att_weights)
+        print(att_weights.shape)
         if debug:
             print(energies.shape)
 
         # Entropy is a measure of uncertainty: Higher value means less information.
         entropy = self.get_entropy(logits=energies)
-        entropy = F.normalize(entropy, p=1, dim=-1)
+        entropy = F.normalize(entropy, p=1, dim=-1)  # unique vector
         if debug:
             print(entropy.shape)
 
         # Compute the mask to form the Block diagonal sparse attention matrix
         D = self.block_size
-        num_blocks = math.ceil(energies.shape[0] / D)
+        num_blocks = math.ceil(energies.shape[0] / D)  # 35/4=9 blocks
         keepingMask = torch.ones(num_blocks, D, D, device=att_weights.device)
+        if debug:
+            print(keepingMask)
+            print(keepingMask.shape)
         keepingMask = torch.block_diag(*keepingMask)[
             : att_weights.shape[0], : att_weights.shape[0]
         ]
@@ -107,11 +112,14 @@ class SelfAttention(nn.Module):
         if debug:
             print(zeroingMask)
             print(zeroingMask.shape)
-        att_win = att_weights * keepingMask
+        att_win = att_weights * keepingMask  # attention inside block
+        if debug:
+            print(att_win)
+            print(att_win.shape)
 
         # Pick those frames that are "invisible" to a frame, aka outside the block (mask)
-        attn_remainder = att_weights * zeroingMask
-        div_remainder = diversity * zeroingMask
+        attn_remainder = att_weights * zeroingMask  # attention outside block
+        div_remainder = diversity * zeroingMask  # diversity outside block
 
         if debug:
             print(attn_remainder)
@@ -120,7 +128,9 @@ class SelfAttention(nn.Module):
             print(div_remainder.shape)
 
         # Compute non-local dependencies based on the diversity of those frames
-        dep_factor = (div_remainder * attn_remainder).sum(-1).div(div_remainder.sum(-1))
+        dep_factor = (
+            (div_remainder * attn_remainder).sum(-1).div(div_remainder.sum(-1))
+        )  # dependencies of outside block, also diversity vector
         if debug:
             print("dep_factor")
             print(dep_factor.shape)
@@ -133,20 +143,25 @@ class SelfAttention(nn.Module):
         if debug:
             print("mask")
             print(masked_dep_factor)
-        att_win += masked_dep_factor
+        att_win += masked_dep_factor  # final block diagonal sparse attetion matrix
 
         y = torch.matmul(att_win, V)
         if debug:
-            print(dep_factor[0, :])
-            print("characteristics")
-        characteristics = (entropy, dep_factor[0, :])
+            print(y)
+            print(y.shape)
+        characteristics = (entropy, dep_factor[0, :])  # stack unique + diveristy
+        characteristics = torch.stack(characteristics).detach()
         if debug:
             print(characteristics)
-
-        characteristics = torch.stack(characteristics).detach()
         outputs = torch.cat(tensors=(y, characteristics.t()), dim=-1)
+        if debug:
+            print(outputs)
+            print(outputs.shape)
 
         y = self.out(outputs)
+        if debug:
+            print(y)
+            print(y.shape)
         return y, att_win.clone()
 
 

@@ -70,7 +70,9 @@ class Sum(nn.Module):
 
         segments = torch.cat(new_list, 0)
 
-        weighted_value, attn_weights = self.attention(segments)
+        weighted_value, attn_weights = self.attention(
+            segments
+        )  # weighted_value shape: N segments x M features (2048)
         y = segments + weighted_value
         # y = segments
         y = self.drop(y)
@@ -83,8 +85,10 @@ class Sum(nn.Module):
         y = self.norm_linear(y)
 
         y = self.linear_2(y)
+        print("yshape:", y.shape)
         y = self.sigmoid(y)
         y = y.view(1, -1)
+        print("yshape:", y.shape)
 
         # return y, attn_weights
         return y

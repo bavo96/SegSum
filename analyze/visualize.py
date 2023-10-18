@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy
 
-dataset_name = "SumMe"
+dataset_name = "TVSum"
 data_path = (
     f"./data/{dataset_name}/eccv16_dataset_{dataset_name.lower()}_google_pool5.h5"
 )
@@ -58,10 +58,11 @@ def visualize(video_name):
         video_full_name = index2video[video_name]
 
     n_frames = np.array(hdf[video_name]["n_frames"])
-    l_frame = [i for i in range(n_frames)]
-    l_frame = list(divide_chunks(l_frame, 60))
-    change_points = [[item[0], item[-1]] for item in l_frame]
-    # change_points = np.array(hdf[video_name]["change_points"])
+
+    # l_frame = [i for i in range(n_frames)]
+    # l_frame = list(divide_chunks(l_frame, 60))
+    # change_points = [[item[0], item[-1]] for item in l_frame]
+    change_points = np.array(hdf[video_name]["change_points"])
 
     if dataset_name == "SumMe":
         # Raw data
@@ -156,8 +157,11 @@ def visualize(video_name):
     len_user_seg = []
     num_user = user_summary.shape[0]
     for user in range(user_summary.shape[0]):
-        if model_score[f"best_user_{video_full_name}"] == user:
-            color = (255, 191, 0)
+        if dataset_name == "SumMe":
+            if model_score[f"best_user_{video_full_name}"] == user:
+                color = (255, 191, 0)
+            else:
+                color = (0, 0, 255)
         else:
             color = (0, 0, 255)
         user_sum = [

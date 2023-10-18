@@ -1,6 +1,6 @@
 __pycache__
 data/
-visualize/
+visualize_data/
 *trained_model/
 *trained_model_temp/
 Summaries/

@@ -159,6 +159,7 @@ if __name__ == "__main__":
     # dataset = "TVSum"  # args["dataset"]
     dataset = "SumMe"  # args["dataset"]
     corr_coef = False  # args["corr_coef"]
+    seed = 3
     eval_metric = "avg" if dataset.lower() == "tvsum" else "max"
     print(f"Dataset: {dataset}, eval_metric: {eval_metric}")
 
@@ -182,8 +183,8 @@ if __name__ == "__main__":
 
     for split_id in range(5):
         # Model data
-        model_path = f"./Summaries/reg0.15/{dataset}/1996/models/split{split_id}/"
-        # model_path = f"./inference/pretrained_models/{dataset}/split{split_id}"
+        # model_path = f"./Summaries/reg0.15/{dataset}/{seed}/models/split{split_id}/"
+        model_path = f"./Summaries/reg0.15_1/{dataset}/{seed}/models/split{split_id}/"
         # model_path = f"./results/{dataset.lower()}_trained_model/best_model/{split_id}/"
         # model_path = f"./results/{dataset.lower()}_trained_model/{split_id}/"
         print(model_path)
@@ -204,7 +205,7 @@ if __name__ == "__main__":
             test_keys = data[split_id]["test_keys"]
 
         # Create model with paper reported configuration
-        trained_model = Sum(input_size=2048, output_size=2048, block_size=4).to(device)
+        trained_model = Sum(input_size=2048, output_size=2048, block_size=1).to(device)
         # trained_model = CA_SUM(input_size=1024, output_size=1024, block_size=60).to(
         #     device
         # )
