@@ -2,8 +2,8 @@
 import json
 import os
 import random
+import time
 
-import h5py
 import numpy as np
 import torch
 import torch.nn as nn
@@ -12,8 +12,8 @@ from torch.optim.lr_scheduler import ExponentialLR
 from tqdm import tqdm, trange
 
 from inference.inference_data import inference
-# from model.summarizer import Sum
-from model.new_sum import Sum
+
+from model.summarizer import Sum
 from model.utils import TensorboardWriter
 
 
@@ -39,9 +39,11 @@ class Solver(object):
         """Function for constructing the CA-SUM model, its key modules and parameters."""
         # Model creation
         self.model = Sum(
-            input_size=2048,
-            output_size=2048,
+            input_size=self.config.input_size,
+            output_size=self.config.input_size,
             block_size=self.config.block_size,
+            seg_method=self.config.seg_emb_method,
+            attn_mechanism=self.config.attn_mechanism,
         ).to(self.config.device)
 
         if self.config.init_type is not None:
@@ -97,7 +99,15 @@ class Solver(object):
         :param torch.Tensor scores: Frame-level importance scores, produced by our CA-SUM model.
         :return: A (torch.Tensor) value indicating the summary-length regularization loss.
         """
-        return torch.abs(torch.mean(scores) - self.config.reg_factor)
+        # print("loss")
+        mean_scores = torch.mean(scores)
+        loss = torch.abs(mean_scores - self.config.reg_factor)
+        # print(scores)
+        # print(mean_scores)
+        # print(self.config.reg_factor)
+        # print(loss)
+        # print("end loss")
+        return loss
 
     def train(self):
         """Main function to train the CA-SUM model."""
@@ -131,22 +141,30 @@ class Solver(object):
                 ):
                     # print(f"video {video_i}...")
                     _, frame_features, change_point = next(iterator)
-                    # print(frame_features.shape)
+                    # _, frame_features = next(iterator)
                     frame_features = frame_features.squeeze(0).to(self.config.device)
-                    # print(frame_features.shape)
 
                     output = self.model(frame_features, change_point)
+                    # output = self.model(frame_features)
                     # print(f"output: {output}")
+
+                    # start = time.time()
                     loss = self.length_regularization_loss(output)
                     loss_history.append(loss.data)
                     loss.backward()
+                    # end = time.time() - start
+                    # print(f"compute loss time: {end}")
 
+                # start = time.time()
                 # Update model parameters every 'batch_size' iterations
                 torch.nn.utils.clip_grad_norm_(
                     self.model.parameters(), self.config.clip
                 )
                 self.optimizer.step()
                 # self.scheduler.step()
+
+                # end = time.time() - start
+                # print(f"compute optimizer {end}")
 
             # Mean loss of each training step
             loss = torch.stack(loss_history).mean()
@@ -182,6 +200,8 @@ class Solver(object):
             #         f"Current maximum fscore by loss: epoch {min_epoch}({min_fscore:.2f}%)"
             #     )
 
+            # self.get_score(epoch_i)
+
             if fscore > max_fscore:
                 max_precision = precision
                 max_recall = recall
@@ -213,10 +233,11 @@ class Solver(object):
         elif self.config.dataset_name == "TVSum":
             inference_method = "avg"
 
+        split_idx = self.config.split_index
         if mode == "train":
-            keys = self.splits[self.config.split_index][mode + "_keys"]
+            keys = self.splits[split_idx][mode + "_keys"]
         elif mode == "test":
-            keys = self.splits[self.config.split_index][mode + "_keys"]
+            keys = self.splits[split_idx][mode + "_keys"]
 
         precision, recall, fscore = inference(
             self.model,
@@ -231,6 +252,45 @@ class Solver(object):
         # print(f"F1 score on {mode} data: {fscore}")
 
         return precision, recall, fscore
+
+    def get_score(self, epoch_i):
+        """Saves the frame's importance scores for the test videos in json format.
+
+        :param int epoch_i: The current training epoch.
+        :param bool save_weights: Optionally, the user can choose to save the attention weights in a (large) h5 file.
+        """
+        self.model.eval()
+
+        out_scores_dict = {}
+        for video_name, frame_features in tqdm(
+            self.test_loader, desc="Evaluate", ncols=80, leave=False
+        ):
+            # [seq_len, input_size]
+            frame_features = frame_features.view(-1, self.config.input_size).to(
+                self.config.device
+            )
+
+            with torch.no_grad():
+                scores = self.model(frame_features)  # [1, seq_len]
+                scores = scores.squeeze(0).cpu().numpy().tolist()
+
+                out_scores_dict[video_name] = scores
+
+            if not os.path.exists(self.config.score_dir):
+                os.makedirs(self.config.score_dir)
+
+            scores_save_path = os.path.join(
+                self.config.score_dir, f"{self.config.dataset_name}_{epoch_i}.json"
+            )
+            with open(scores_save_path, "w") as f:
+                if self.config.verbose:
+                    tqdm.write(f"Saving score at {str(scores_save_path)}.")
+                json.dump(out_scores_dict, f)
+            # scores_save_path.chmod(0o777)
+
+    def __del__(self):
+        print("Close Tensorboard writer...")
+        self.writer.close()
 
 
 if __name__ == "__main__":

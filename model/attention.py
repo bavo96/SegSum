@@ -6,7 +6,51 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-debug = True
+debug = False
+
+
+class SegAttention(nn.Module):
+    def __init__(self, input_size=1024, output_size=1024):
+        super(SegAttention, self).__init__()
+
+        self.input_size = input_size
+        self.output_size = output_size
+        self.Wk = nn.Linear(
+            in_features=input_size, out_features=output_size, bias=False
+        )  # key using mean
+        self.Wq = nn.Linear(
+            in_features=input_size, out_features=output_size, bias=False
+        )
+        self.Wv = nn.Linear(
+            in_features=input_size, out_features=output_size, bias=False
+        )
+        self.out = nn.Linear(
+            in_features=input_size, out_features=output_size, bias=False
+        )
+
+        self.layernorm = nn.LayerNorm(normalized_shape=input_size, eps=1e-6)
+        self.softmax = nn.Softmax(dim=-1)
+
+    def forward(self, x):
+        x_diff = x[0 : x.shape[0] - 1, :] - x[1 : x.shape[0], :]
+
+        seg_mean = torch.mean(x_diff, dim=0).reshape(1, -1)
+        K = self.Wk(seg_mean)
+        Q = self.Wq(x_diff)
+        V = self.Wv(x_diff)
+        # print(K.shape, Q.shape, V.shape)
+
+        energies = torch.matmul(K, Q.transpose(1, 0))
+        # print(f"energies: {energies.shape}")
+        scores = self.softmax(energies)
+        # print(f"scores: {scores.shape}")
+        seg_embedding = torch.matmul(scores, V)
+        # print(f"seg_embedding: {seg_embedding.shape}")
+
+        seg_embedding += seg_mean
+        norm_seg_embedding = self.layernorm(seg_embedding)
+
+        return norm_seg_embedding
 
 
 class SelfAttention(nn.Module):
@@ -84,10 +128,10 @@ class SelfAttention(nn.Module):
 
         energies = torch.matmul(Q, K.transpose(1, 0))
         att_weights = self.softmax(energies)  # attention matrix
-        print(att_weights)
-        print(att_weights.shape)
         if debug:
             print(energies.shape)
+            print(att_weights.shape)
+            print(att_weights)
 
         # Entropy is a measure of uncertainty: Higher value means less information.
         entropy = self.get_entropy(logits=energies)
@@ -167,15 +211,8 @@ class SelfAttention(nn.Module):
 
 if __name__ == "__main__":
     pass
-    """Uncomment for a quick proof of concept
-    model = SelfAttention(input_size=256, output_size=128, block_size=30).cuda()
-    _input = torch.randn(500, 256).cuda()  # [seq_len, hidden_size]
-    output, weights = model(_input)
-    print(f"Output shape: {output.shape}\tattention shape: {weights.shape}")
-    """
-
+    """Uncomment for a quick proof of concept"""
     model = SelfAttention(input_size=8, output_size=4, block_size=2).cuda()
     _input = torch.randn(5, 8).cuda()  # [seq_len, hidden_size]
-    x_unit = F.normalize(_input, p=2, dim=1)
     output, weights = model(_input)
     print(f"Output shape: {output.shape}\tattention shape: {weights.shape}")

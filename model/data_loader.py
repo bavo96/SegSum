@@ -5,6 +5,7 @@ import pickle
 import h5py
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
+from torch import Tensor
 
 from model.config import get_config
 
@@ -57,12 +58,12 @@ class VideoData(Dataset):
             video_features = self.raw_video_features[full_vid_name]
             self.all_data.append((video_name, video_features, change_point))
 
-        ## Get subsampled features
+        # # Get subsampled features
         # for video_name in splits[self.split_index][self.mode + "_keys"]:
-        #     print(hdf[video_name].keys())
-        #     print(hdf[video_name]["n_frame_per_seg"])
-        #     print(np.array(hdf[video_name]["change_points"]))
-        #     video_features = torch.Tensor(np.array(hdf[video_name + "/features"]))
+        #     # print(hdf[video_name].keys())
+        #     # print(hdf[video_name]["n_frame_per_seg"])
+        #     # print(np.array(hdf[video_name]["change_points"]))
+        #     video_features = Tensor(np.array(hdf[video_name + "/features"]))
         #     self.all_data.append((video_name, video_features))
 
     def __len__(self):
@@ -71,6 +72,8 @@ class VideoData(Dataset):
     def __getitem__(self, index):
         video_name, feature, change_point = self.all_data[index]
         return video_name, feature, change_point
+        # video_name, feature = self.all_data[index]
+        # return video_name, feature
 
 
 def get_loader(

@@ -16,8 +16,10 @@ import numpy as np
 import torch
 
 from inference.evaluation_metrics import evaluate_summary, get_corr_coeff
+
 from inference.generate_summary import generate_summary
-from model.new_sum import Sum
+
+from model.summarizer import Sum
 
 eligible_datasets = ["TVSum"]
 
@@ -88,6 +90,10 @@ def inference(model, keys, eval_method, raw_video_features, hdf, dataset, corr_c
         user_summary = np.array(hdf[f"{video}/user_summary"])
         n_frames = np.array(hdf[f"{video}/n_frames"])
         sb = torch.Tensor(np.array(hdf[f"{video}/change_points"]))
+        # sb = np.array(np.array(hdf[f"{video}/change_points"]))
+        positions = np.array(hdf[f"{video}/picks"])  # for old generate_summary
+        # frame_features = torch.Tensor(np.array(hdf[f"{video}/features"]))
+        # frame_features = frame_features.to(model.linear_1.weight.device)
 
         # # Custom sb
         # l_frame = [i for i in range(n_frames)]
@@ -98,12 +104,15 @@ def inference(model, keys, eval_method, raw_video_features, hdf, dataset, corr_c
         # print("inference...")
         with torch.no_grad():
             scores = model(frame_features, sb)  # [1, seq_len]
+            # scores = model(frame_features)  # [1, seq_len]
             # print(sb.shape, scores.shape, n_frames, user_summary.shape, eval_method)
             # print(f"Segment shape: {scores.shape}")
             scores = scores.squeeze(0).cpu().numpy().tolist()
             # print(scores)
+            # print(f"scores: {scores}")
 
             summary = generate_summary([sb], [scores], [n_frames])[0]
+            # summary = generate_summary([sb], [scores], [n_frames], [positions])[0]
             video_segments_scores[video_fullname] = summary
             if dataset == "SumMe":
                 (precision, recall, f_score), best_user = evaluate_summary(
@@ -156,8 +165,8 @@ if __name__ == "__main__":
     )
 
     args = vars(parser.parse_args())
-    # dataset = "TVSum"  # args["dataset"]
-    dataset = "SumMe"  # args["dataset"]
+    dataset = "TVSum"  # args["dataset"]
+    # dataset = "SumMe"  # args["dataset"]
     corr_coef = False  # args["corr_coef"]
     seed = 3
     eval_metric = "avg" if dataset.lower() == "tvsum" else "max"
@@ -169,11 +178,11 @@ if __name__ == "__main__":
     raw_video_features_path = (
         f"./data/{dataset}/{dataset.lower()}_video_features.pickle"
     )
-    print(raw_video_features_path)
     start = time.time()
     raw_video_features = pickle.load(
         open(raw_video_features_path, "rb"),
     )
+    print(f"Raw features path: {raw_video_features_path}")
     end = time.time() - start
     print("Load raw features:", end)
 
@@ -183,11 +192,11 @@ if __name__ == "__main__":
 
     for split_id in range(5):
         # Model data
-        # model_path = f"./Summaries/reg0.15/{dataset}/{seed}/models/split{split_id}/"
-        model_path = f"./Summaries/reg0.15_1/{dataset}/{seed}/models/split{split_id}/"
+        model_path = f"./Summaries/reg0.15/{dataset}/{seed}/models/split{split_id}/"
+        # model_path = f"./Summaries/reg0.15_1/{dataset}/{seed}/models/split{split_id}/"
         # model_path = f"./results/{dataset.lower()}_trained_model/best_model/{split_id}/"
         # model_path = f"./results/{dataset.lower()}_trained_model/{split_id}/"
-        print(model_path)
+        print(f"Model path: {model_path}")
         model_file = max(
             [
                 int(f.split(".")[0].split("-")[1])
@@ -206,9 +215,7 @@ if __name__ == "__main__":
 
         # Create model with paper reported configuration
         trained_model = Sum(input_size=2048, output_size=2048, block_size=1).to(device)
-        # trained_model = CA_SUM(input_size=1024, output_size=1024, block_size=60).to(
-        #     device
-        # )
+        # trained_model = Sum(input_size=1024, output_size=1024, block_size=60).to(device)
         trained_model.load_state_dict(torch.load(model_full_path))
         precision, recall, f_score = inference(
             trained_model,

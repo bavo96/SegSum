@@ -41,7 +41,7 @@ class Config(object):
         self.features_path = os.path.join(
             kwargs["root_data_path"],
             kwargs["dataset_name"],
-            f"{kwargs['dataset_name'].lower()}_video_features.pickle",
+            f"{kwargs['dataset_name'].lower()}_video_features_version_2.pickle",
         )
 
     def set_training_dir(self, seed=0, reg_factor=0.6, dataset_name="SumMe"):
@@ -52,19 +52,23 @@ class Config(object):
         """
         self.log_dir = os.path.join(
             self.root_results_path,
+            self.experiment_id,
             "reg" + str(reg_factor),
             dataset_name,
             str(seed),
             "logs/split" + str(self.split_index),
         )
-        # self.score_dir = save_dir.joinpath(
-        #     "reg" + str(reg_factor),
-        #     dataset_name,
-        #     seed,
-        #     "results/split" + str(self.split_index),
-        # )
+        self.score_dir = os.path.join(
+            self.root_results_path,
+            self.experiment_id,
+            "reg" + str(reg_factor),
+            dataset_name,
+            str(seed),
+            "results/split" + str(self.split_index),
+        )
         self.model_dir = os.path.join(
             self.root_results_path,
+            self.experiment_id,
             "reg" + str(reg_factor),
             dataset_name,
             str(seed),
@@ -75,8 +79,11 @@ class Config(object):
             os.makedirs(self.model_dir)
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
+        if not os.path.exists(self.score_dir):
+            os.makedirs(self.score_dir)
         print(self.model_dir)
         print(self.log_dir)
+        print(self.score_dir)
 
     def __repr__(self):
         """Pretty-print configurations in alphabetical order."""
@@ -113,6 +120,12 @@ def get_config(parse=True, **optional_kwargs):
         help="Path to training resutls",
     )
     parser.add_argument(
+        "--experiment_id",
+        type=str,
+        default="1",
+        help="Experiment id",
+    )
+    parser.add_argument(
         "--verbose",
         type=str2bool,
         default="false",
@@ -123,6 +136,12 @@ def get_config(parse=True, **optional_kwargs):
     )
 
     # Model
+    parser.add_argument(
+        "--attn_mechanism",
+        type=str2bool,
+        default=1,
+        help="Whether or not to use the attention mechanism (true or false). Default: true",
+    )
     parser.add_argument(
         "--input_size",
         type=int,
@@ -143,6 +162,12 @@ def get_config(parse=True, **optional_kwargs):
         type=float,
         default=1.4142,
         help="Scaling factor for the initialization methods",
+    )
+    parser.add_argument(
+        "--seg_emb_method",
+        type=str,
+        default="mean",
+        help="Method to extract information from segment (max, mean, attention). Default: mean",
     )
 
     # Train
