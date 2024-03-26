@@ -10,6 +10,7 @@ import numpy as np
 import scipy
 
 dataset_name = "TVSum"
+# dataset_name = "SumMe"
 data_path = (
     f"./data/{dataset_name}/eccv16_dataset_{dataset_name.lower()}_google_pool5.h5"
 )
@@ -26,8 +27,19 @@ model_score = pickle.load(
 splits = json.loads(
     open(f"./data/splits/{dataset_name.lower()}_splits.json", "r").read()
 )
-test_keys = splits[4]["test_keys"]
 
+# SumMe: max method, sigma=0.3, seed=6, blocksize = 1, split 2
+# TVSum: max method, sigma=0.9, seed=2, blocksize = 2, split 4
+
+if dataset_name == "SumMe":
+    s = 0
+elif dataset_name == "TVSum":
+    s = 0
+
+# keys = splits[s]["train_keys"]
+keys = splits[s]["test_keys"]
+
+# print(model_score)
 
 def divide_chunks(l, n):
     # looping till length l
@@ -51,10 +63,9 @@ def visualize(video_name):
             full_name = np.array(hdf[key]["n_frames"]).astype("str").tolist()
             frame2video[nframes] = key
 
-        for k, v in model_score.items():
-            video_full_name = k
-            video2index[video_full_name] = frame2video[v.shape[0]]
-            index2video[frame2video[v.shape[0]]] = video_full_name
+        for vidname, data in model_score.items():
+            video2index[vidname] = frame2video[data["summary"].shape[0]]
+            index2video[frame2video[data["summary"].shape[0]]] = vidname
         video_full_name = index2video[video_name]
 
     n_frames = np.array(hdf[video_name]["n_frames"])
@@ -111,45 +122,90 @@ def visualize(video_name):
         s += flag
         flag *= -1
 
-    img = np.zeros((1024, n_frames, 3), np.uint8)
+    # Create result image
+    img = np.ones((950, n_frames, 4), np.uint8) * 255
+
+    # img = cv2.putText(
+    #     img,
+    #     "KTS",
+    #     (50, 850),
+    #     cv2.FONT_HERSHEY_SIMPLEX,
+    #     2,
+    #     (122, 160, 255, 0),
+    #     cv2.LINE_AA,
+    # )
 
     # Draw kts
-    for i in range(img.shape[1]):
-        if kts_segments[i] == 1:
-            img[800:820, i] = (255, 0, 0)  # Blue
-        elif kts_segments[i] == 2:
-            img[800:820, i] = (0, 255, 0)  # Green
+    cv2.rectangle(img, (0, 750), (int(n_frames), 800), (143, 255, 255, 0), -1)
 
-        if i % (fps * 5) == 0:
-            img = cv2.putText(
-                img,
-                str(int(i / fps)),
-                (i, 860),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (255, 255, 0),
-                2,
-            )
+    for i, cp in enumerate(change_points):
+        if i == len(change_points) - 1:
+            break
+        # num_frame = cp[1] - cp[0] + 1
+        cv2.line(img, (cp[1], 750), (cp[1], 800), (0, 128, 139, 0), thickness=5)
+
+    # # Draw kts time range
+    # for i in range(img.shape[1]):
+    #     if i % (fps * 5) == 0:
+    #         img = cv2.putText(
+    #             img,
+    #             str(int(i / fps)),
+    #             (i, 970),
+    #             cv2.FONT_HERSHEY_SIMPLEX,
+    #             1,
+    #             (255, 255, 0),
+    #             2,
+    #         )
+
+    # # Draw kts
+    # for i in range(img.shape[1]):
+    #     if kts_segments[i] == 1:
+    #         img[900:920, i] = (255, 0, 0)  # Blue
+    #     elif kts_segments[i] == 2:
+    #         img[900:920, i] = (0, 255, 0)  # Green
+    #
+    #     if i % (fps * 5) == 0:
+    #         img = cv2.putText(
+    #             img,
+    #             str(int(i / fps)),
+    #             (i, 960),
+    #             cv2.FONT_HERSHEY_SIMPLEX,
+    #             1,
+    #             (255, 255, 0),
+    #             2,
+    #         )
+
+    # img = cv2.putText(
+    #     img,
+    #     "Summary",
+    #     (50, 1100),
+    #     cv2.FONT_HERSHEY_SIMPLEX,
+    #     2,
+    #     (122, 160, 255, 0),
+    #     cv2.LINE_AA,
+    # )
 
     # Draw model scores
-    video_score = model_score[video_full_name]
-    for i in range(img.shape[1]):
+    video_score = model_score[video_full_name]["summary"]
+    for i in range(n_frames):
         if video_score[i] == 0:
-            img[900:920, i] = (255, 0, 0)  # Blue
+            img[810:860, i] = (255, 0, 0, 0)  # Blue
         elif video_score[i] == 1:
-            img[900:920, i] = (0, 255, 0)  # Green
+            img[810:860, i] = (0, 255, 0, 0)  # Green
         else:
             print(f"video_score:{video_score[i]}")
-            img[900:920, i] = (0, 255, 255)
+            img[810:860, i] = (0, 255, 255, 0)
 
+    # Draw time range
+    for i in range(n_frames):
         if i % (fps * 5) == 0:
             img = cv2.putText(
                 img,
                 str(int(i / fps)),
-                (i, 960),
+                (i, 890),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 1,
-                (255, 255, 0),
+                (0, 0, 0, 0),
                 2,
             )
 
@@ -159,11 +215,11 @@ def visualize(video_name):
     for user in range(user_summary.shape[0]):
         if dataset_name == "SumMe":
             if model_score[f"best_user_{video_full_name}"] == user:
-                color = (255, 191, 0)
+                color = (255, 191, 0, 0)
             else:
-                color = (0, 0, 255)
+                color = (0, 0, 255, 0)
         else:
-            color = (0, 0, 255)
+            color = (0, 0, 255, 0)
         user_sum = [
             i if user_summary[user][i] != 0 else 0
             for i in range(len(user_summary[user]))
@@ -184,7 +240,7 @@ def visualize(video_name):
                 user_segment.append([start, end])
 
         # Draw user score
-        for i in range(img.shape[1]):
+        for i in range(n_frames):
             if user_summary[user][i] == 1:
                 img[
                     int(700 / num_user) * (user + 1) : int(700 / num_user) * (user + 2)
@@ -198,11 +254,14 @@ def visualize(video_name):
     return len_kts_seg, len_user_seg
 
 
+# TVSum: XzYM3PfTM4w
+# SumMe: St Maarten Landing
+
 if __name__ == "__main__":
     final_len_seg = []
     final_user_len_seg = []
     # for i, key in enumerate(hdf.keys()):
-    for i, key in enumerate(test_keys):
+    for i, key in enumerate(keys):
         print(f"video {i}...")
         kts_segments, user_segments = visualize(key)
         final_len_seg.extend(kts_segments)

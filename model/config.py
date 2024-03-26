@@ -116,7 +116,7 @@ def get_config(parse=True, **optional_kwargs):
     parser.add_argument(
         "--root_results_path",
         type=str,
-        default="./Summaries/",
+        default="./Training_Results/",
         help="Path to training resutls",
     )
     parser.add_argument(

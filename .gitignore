@@ -1,11 +1,25 @@
 __pycache__
-data/
+
+# data folder
+*.pickle
+*.h5
+*.zip
+ydata-anno.rar
+
+# analyze folder
 visualize_data/
-*trained_model/
-*trained_model_temp/
-Summaries/
+frames/
+
+# evaluation folder
 evaluation/
+
+# inference folder
 inference/pretrained_models/
+inference/best_models/
+
+# results' folders
 results/
+Training_Results/
+paper_final_results/
 
-
+.ipynb_checkpoints

@@ -12,7 +12,6 @@ from torch.optim.lr_scheduler import ExponentialLR
 from tqdm import tqdm, trange
 
 from inference.inference_data import inference
-
 from model.summarizer import Sum
 from model.utils import TensorboardWriter
 
@@ -126,12 +125,17 @@ class Solver(object):
             self.model.train()
 
             loss_history = []
+            training_time = []
+
             # print(f"num train: {len(self.train_loader)}")
             num_batches = int(
                 len(self.train_loader) / self.config.batch_size
             )  # full-batch or mini batch
             # print(f"num batch: {num_batches}")
             iterator = iter(self.train_loader)
+
+            start_train_time = time.time()
+
             for batch_i in trange(num_batches, desc="Batch", ncols=80, leave=False):
                 self.optimizer.zero_grad()
                 # print(f"batch {batch_i}...")
@@ -144,7 +148,7 @@ class Solver(object):
                     # _, frame_features = next(iterator)
                     frame_features = frame_features.squeeze(0).to(self.config.device)
 
-                    output = self.model(frame_features, change_point)
+                    output, _ = self.model(frame_features, change_point)
                     # output = self.model(frame_features)
                     # print(f"output: {output}")
 
@@ -165,6 +169,10 @@ class Solver(object):
 
                 # end = time.time() - start
                 # print(f"compute optimizer {end}")
+
+            # Compute time per epoch
+            end_train_time = time.time() - start_train_time
+            training_time.append(end_train_time)
 
             # Mean loss of each training step
             loss = torch.stack(loss_history).mean()
@@ -214,6 +222,8 @@ class Solver(object):
                 ckpt_path = os.path.join(self.config.model_dir, f"epoch-{epoch_i}.pt")
                 tqdm.write(f"Save parameters at {ckpt_path}")
                 torch.save(self.model.state_dict(), ckpt_path)
+
+        print(f"Training time (sec/epoch) {np.mean(training_time)}")
 
         # return max_epoch, max_fscore, min_epoch, min_loss, min_fscore
         return (
@@ -271,7 +281,7 @@ class Solver(object):
             )
 
             with torch.no_grad():
-                scores = self.model(frame_features)  # [1, seq_len]
+                scores, _ = self.model(frame_features)  # [1, seq_len]
                 scores = scores.squeeze(0).cpu().numpy().tolist()
 
                 out_scores_dict[video_name] = scores

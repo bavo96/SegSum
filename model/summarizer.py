@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
+import time
+
 import numpy as np
 import torch
 import torch.nn as nn
 
-import time
-from .attention import SelfAttention, SegAttention
+from .attention import SegAttention, SelfAttention
 
 # from attention import SelfAttention
 
@@ -147,8 +148,10 @@ class Sum(nn.Module):
         if debug:
             print("yshape:", y.shape)
 
-        # return y, attn_weights
-        return y
+        if self.attn_mechanism:
+            return y, attn_weights
+        else:
+            return y, None
 
 
 if __name__ == "__main__":
