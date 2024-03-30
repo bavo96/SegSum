@@ -29,10 +29,10 @@ Pretrained models and training/test data are available [here](https://drive.goog
 ```
 
 # Training
-To reproduce our training, run ```python search_params.py```
+To reproduce our training, run ```python -m train.search_params```
 
 # Evaluation
-To evaluate our best models, put the `best_models` in `inference` folder and run `python inference_data.py`
+To evaluate our best models, put the `best_models` in `inference` folder and run `python inference/inference_data.py`
 
 ## Acknowledgement
 This repo is built mainly on the CA-SUM repo: (https://github.com/e-apostolidis/CA-SUM).
