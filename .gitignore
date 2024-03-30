@@ -5,6 +5,8 @@ __pycache__
 *.h5
 *.zip
 ydata-anno.rar
+summe_video_features_version_2.rar
+tvsum_video_features_version_2.rar
 
 # analyze folder
 visualize_data/
