@@ -1,1 +1,3 @@
-openpyxl
+h5py
+torch
+scipy
