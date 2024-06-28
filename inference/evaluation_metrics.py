@@ -29,13 +29,16 @@ def evaluate_summary(predicted_summary, user_summary, eval_method):
     for user in range(user_summary.shape[0]):
         G[: user_summary.shape[1]] = user_summary[user]
         # if user == 0:
-        #     print(len(G))
-        #     print(f"user: {G}")
+        # print(len(G))
+        # print(f"user: {G}")
         overlapped = S & G
         # print(overlapped)
 
         # Compute precision, recall, f-score
-        precision = sum(overlapped) / sum(S)
+        if sum(S) == 0:
+            precision = 0
+        else:
+            precision = sum(overlapped) / sum(S)
         recall = sum(overlapped) / sum(G)
         # Return tuple precision, recall, f-score
         if precision + recall == 0:

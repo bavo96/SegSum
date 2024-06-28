@@ -144,7 +144,20 @@ class Sum(nn.Module):
         if debug:
             print("yshape:", y.shape)
         y = self.sigmoid(y)
+
+        # print("0:", y.shape[0])
+        # print("1:", y.shape[1])
+        # y = self.softmax(y)
+        # print(y.shape)
+
         y = y.view(1, -1)
+        print(y)
+        # y = torch.where(y > 0.5, y / y, y - y)
+        y = torch.round(y, decimals=0)
+        print(y)
+
+        # print("Y:", y)
+        # print("Y shape:", y.shape)
         if debug:
             print("yshape:", y.shape)
 

@@ -15,8 +15,8 @@ from model.solver import Solver
 
 if __name__ == "__main__":
     # DATASET NAME
-    # dataset_name = "SumMe"
-    dataset_name = "TVSum"
+    dataset_name = "SumMe"
+    # dataset_name = "TVSum"
 
     # EXPERIMENT NAME
 
@@ -43,13 +43,15 @@ if __name__ == "__main__":
         reg_factor = 0.3
         block_size = 1
         seed = 6
-        list_split_idx = [2]
+        list_split_idx = [0]
     elif dataset_name == "TVSum":
         batch_size = 40
         reg_factor = 0.9
         block_size = 2
         seed = 2
-        list_split_idx = [4]
+        list_split_idx = [0]  # range(5)
+
+    reg_factor = 0.3
     input_size = 1024
     seg_emb_methods = "max"  # "max", "mean", "attention"
     attn_mechanism = True
@@ -68,6 +70,8 @@ if __name__ == "__main__":
             "input_size": input_size,
             "seg_emb_method": seg_emb_methods,
             "attn_mechanism": attn_mechanism,
+            "verbose": "true",
+            "lr": 5e-3,
         }
         for k, v in params.items():
             setattr(config, k, v)

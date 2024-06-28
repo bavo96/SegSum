@@ -103,6 +103,7 @@ def inference(model, keys, eval_method, raw_video_features, hdf, dataset, corr_c
         # print("inference...")
         with torch.no_grad():
             scores, attn_weights = model(frame_features, sb)  # [1, seq_len]
+            # print(scores)
             # scores = model(frame_features)  # [1, seq_len]
             # print(sb.shape, scores.shape, n_frames, user_summary.shape, eval_method)
             # print(f"Segment shape: {scores.shape}")
@@ -167,8 +168,8 @@ if __name__ == "__main__":
     )
 
     args = vars(parser.parse_args())
-    dataset = "TVSum"  # args["dataset"]
-    # dataset = "SumMe"  # args["dataset"]
+    # dataset = "TVSum"  # args["dataset"]
+    dataset = "SumMe"  # args["dataset"]
     corr_coef = False  # args["corr_coef"]
     eval_metric = "avg" if dataset.lower() == "tvsum" else "max"
     print(f"Dataset: {dataset}, eval_metric: {eval_metric}")
@@ -190,9 +191,15 @@ if __name__ == "__main__":
     hdf = h5py.File(dataset_path, "r")  # Open hdf file
 
     # SumMe: max method, sigma=0.3, seed=6, blocksize = 1, split 2
-    # TVSum: max method, sigma=0.9, seed=2, blocksize = 2, split 4
+    # TVSum: avg method, sigma=0.9, seed=2, blocksize = 2, split 4
+
+    seed_pred, seed_rec, seed_fscore = [], [], []
+
+    max_seed, max_value = -1, 0
 
     for seed in range(1, 11):
+        # if seed != 2:
+        #     continue
         if dataset == "SumMe":
             if seed != 6:
                 continue
@@ -202,30 +209,21 @@ if __name__ == "__main__":
         print(f"seed: {seed}")
         l_precision, l_recall, l_fscore = [], [], []
         for split_id in range(5):
-            # if dataset == "SumMe":
-            #     if split_id != 2:
-            #         continue
-            # elif dataset == "TVSum":
-            #     if split_id != 4:
-            #         continue
-
-            # if dataset == "SumMe":
-            #     if split_id != 0:
-            #         continue
-            # elif dataset == "TVSum":
-            #     if split_id != 0:
-            #         continue
+            if dataset == "SumMe":
+                if split_id != 2:
+                    continue
+            elif dataset == "TVSum":
+                if split_id != 0:
+                    continue
 
             # Model data
-            # model_path = f"./Summaries/reg0.15/{dataset}/{seed}/models/split{split_id}/"
-            # model_path = f"./Summaries/reg0.15_1/{dataset}/{seed}/models/split{split_id}/"
-            # model_path = f"./results/{dataset.lower()}_trained_model/best_model/{split_id}/"
-            # model_path = f"./results/{dataset.lower()}_trained_model/{split_id}/"
+            # model_path = (
+            #     f"./inference/best_models/{dataset}/{seed}/models/split{split_id}"
+            # )
             model_path = (
-                f"./inference/best_models/{dataset}/{seed}/models/split{split_id}"
+                f"./inference/new_model/{dataset}/{seed}/models/split{split_id}"
             )
-
-            # print(f"Model path: {model_path}")
+            print(f"Model path: {model_path}")
             model_file = max(
                 [
                     int(f.split(".")[0].split("-")[1])
@@ -244,16 +242,23 @@ if __name__ == "__main__":
                 # keys = data[split_id]["test_keys"]
 
             # Create model with paper reported configuration
-
             # For SumMe
             if dataset == "SumMe":
                 trained_model = Sum(
-                    input_size=1024, output_size=1024, block_size=1, attn_mechanism=True
+                    input_size=1024,
+                    output_size=1024,
+                    block_size=1,
+                    attn_mechanism=True,
+                    seg_method="max",
                 ).to(device)
             # For TVSum
             elif dataset == "TVSum":
                 trained_model = Sum(
-                    input_size=1024, output_size=1024, block_size=2, attn_mechanism=True
+                    input_size=1024,
+                    output_size=1024,
+                    block_size=2,
+                    attn_mechanism=True,
+                    seg_method="max",
                 ).to(device)
 
             trained_model.load_state_dict(torch.load(model_full_path))
@@ -285,5 +290,17 @@ if __name__ == "__main__":
         print("Mean Precision:", np.mean(l_precision))
         print("Mean Recall:", np.mean(l_recall))
         print("Mean F-Score:", np.mean(l_fscore))
+        seed_fscore.append(np.mean(l_fscore))
+        seed_rec.append(np.mean(l_recall))
+        seed_pred.append(np.mean(l_precision))
+        if np.mean(l_fscore) > max_value:
+            max_value = np.mean(l_fscore)
+            max_seed = seed
 
     hdf.close()
+    print("Average score per seed:")
+    print(f"Avg. Precision: {np.mean(seed_pred)}")
+    print(f"Avg. Recall: {np.mean(seed_rec)}")
+    print(f"Avg. Fscore: {np.mean(seed_fscore)}")
+
+    print(f"Max seed: {max_seed}, max fscore: {max_value}")

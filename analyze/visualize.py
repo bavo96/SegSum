@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy
 
-dataset_name = "TVSum"
-# dataset_name = "SumMe"
+# dataset_name = "TVSum"
+dataset_name = "SumMe"
 data_path = (
     f"./data/{dataset_name}/eccv16_dataset_{dataset_name.lower()}_google_pool5.h5"
 )
@@ -32,14 +32,16 @@ splits = json.loads(
 # TVSum: max method, sigma=0.9, seed=2, blocksize = 2, split 4
 
 if dataset_name == "SumMe":
-    s = 0
+    s = 2
 elif dataset_name == "TVSum":
-    s = 0
+    s = 4
 
 # keys = splits[s]["train_keys"]
 keys = splits[s]["test_keys"]
 
+print(len(keys))
 # print(model_score)
+
 
 def divide_chunks(l, n):
     # looping till length l
@@ -81,17 +83,18 @@ def visualize(video_name):
         gt_data = scipy.io.loadmat(gt_file)  # dict type
         fps = gt_data["FPS"][0][0]
         fps = math.ceil(fps)
+        print("fps:", fps)
         # segments = gt_data["segments"]
-        num_frames = gt_data["nFrames"][0][0]
-        vid_duration = gt_data["video_duration"][0][0]
-        gt_score = gt_data["gt_score"]
-        user_score = gt_data["user_score"]
-        print(f"Raw fps:{fps}")
-        print(f"Round fps: {fps}")
-        print(f"Number of frames: {num_frames}")
-        print(f"Video duration: {vid_duration}")
-        print(f"GT score: {gt_score.shape}")
-        print(f"User score: {user_score.shape}")
+        # num_frames = gt_data["nFrames"][0][0]
+        # vid_duration = gt_data["video_duration"][0][0]
+        # gt_score = gt_data["gt_score"]
+        # user_score = gt_data["user_score"]
+        # print(f"Raw fps:{fps}")
+        # print(f"Round fps: {fps}")
+        # print(f"Number of frames: {num_frames}")
+        # print(f"Video duration: {vid_duration}")
+        # print(f"GT score: {gt_score.shape}")
+        # print(f"User score: {user_score.shape}")
     elif dataset_name == "TVSum":
         video_path = f"{HOMEDATA}/ydata-tvsum50-video/video/{video_full_name}.mp4"
         print(video_path)
@@ -99,7 +102,7 @@ def visualize(video_name):
         print(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
         fps = vidcap.get(cv2.CAP_PROP_FPS)
         fps = math.ceil(fps)
-        print(fps)
+        print("fps:", fps)
 
     # print(segments)
     # print(f"Segments:{segments.shape}")
@@ -249,6 +252,7 @@ def visualize(video_name):
                 ] = color
 
     # Draw scores
+
     res_path = f"./analyze/visualize_data/{dataset_name}/{video_full_name}.jpeg"
     cv2.imwrite(res_path, img)
     return len_kts_seg, len_user_seg
@@ -258,6 +262,17 @@ def visualize(video_name):
 # SumMe: St Maarten Landing
 
 if __name__ == "__main__":
+    import os
+    import shutil
+    from pathlib import Path
+
+    parent_path = f"./analyze/visualize_data/{dataset_name}/"
+
+    if os.path.exists(parent_path) and os.path.isdir(parent_path):
+        shutil.rmtree(parent_path)
+
+    Path(parent_path).mkdir(parents=True, exist_ok=True)
+
     final_len_seg = []
     final_user_len_seg = []
     # for i, key in enumerate(hdf.keys()):

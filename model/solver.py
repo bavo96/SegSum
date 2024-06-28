@@ -8,7 +8,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.optim.lr_scheduler import ExponentialLR
+from torch.optim.lr_scheduler import ExponentialLR, StepLR
 from tqdm import tqdm, trange
 
 from inference.inference_data import inference
@@ -58,8 +58,14 @@ class Solver(object):
                 lr=self.config.lr,
                 weight_decay=self.config.l2_req,
             )
-            # self.optimizer = optim.SGD(self.model.parameters(), lr=0.01, momentum=0.9)
-            # self.scheduler = ExponentialLR(self.optimizer, gamma=0.9)
+            # self.optimizer = optim.SGD(
+            #     self.model.parameters(),
+            #     lr=self.config.lr,
+            #     weight_decay=self.config.l2_req,
+            #     momentum=0.9,
+            # )
+            # self.scheduler = StepLR(self.optimizer, gamma=0.9)
+            self.scheduler = StepLR(self.optimizer, step_size=100, gamma=0.1)
 
             self.writer = TensorboardWriter(str(self.config.log_dir))
 
@@ -98,14 +104,21 @@ class Solver(object):
         :param torch.Tensor scores: Frame-level importance scores, produced by our CA-SUM model.
         :return: A (torch.Tensor) value indicating the summary-length regularization loss.
         """
-        # print("loss")
         mean_scores = torch.mean(scores)
         loss = torch.abs(mean_scores - self.config.reg_factor)
-        # print(scores)
-        # print(mean_scores)
-        # print(self.config.reg_factor)
-        # print(loss)
-        # print("end loss")
+
+        # print(
+        #     "sum:",
+        #     torch.sum(scores),
+        #     "total",
+        #     scores.shape,
+        #     "mean:",
+        #     mean_scores,
+        #     "reg:",
+        #     self.config.reg_factor,
+        #     "loss:",
+        #     loss,
+        # )
         return loss
 
     def train(self):
@@ -153,7 +166,9 @@ class Solver(object):
                     # print(f"output: {output}")
 
                     # start = time.time()
+                    # print("output:", output)
                     loss = self.length_regularization_loss(output)
+                    # print("loss:", loss)
                     loss_history.append(loss.data)
                     loss.backward()
                     # end = time.time() - start
@@ -165,7 +180,9 @@ class Solver(object):
                     self.model.parameters(), self.config.clip
                 )
                 self.optimizer.step()
-                # self.scheduler.step()
+                self.scheduler.step()
+                for param_group in self.optimizer.param_groups:
+                    print(param_group["lr"])
 
                 # end = time.time() - start
                 # print(f"compute optimizer {end}")
@@ -192,13 +209,13 @@ class Solver(object):
             self.writer.update_scalar(fscore, epoch_i, "fscore_test")
 
             # # Compute fscore on trainset
-            # precision_train, recall_train, fscore_train = self.evaluate(
-            #     epoch_i, mode="train"
-            # )
+            precision_train, recall_train, fscore_train = self.evaluate(
+                epoch_i, mode="train"
+            )
             # # Results on train dataset
-            # self.writer.update_scalar(precision_train, epoch_i, "precision_train")
-            # self.writer.update_scalar(recall_train, epoch_i, "recall_train")
-            # self.writer.update_scalar(fscore_train, epoch_i, "fscore_train")
+            self.writer.update_scalar(precision_train, epoch_i, "precision_train")
+            self.writer.update_scalar(recall_train, epoch_i, "recall_train")
+            self.writer.update_scalar(fscore_train, epoch_i, "fscore_train")
 
             # if loss < min_loss:
             #     min_loss = loss
@@ -216,7 +233,10 @@ class Solver(object):
                 max_fscore = fscore
                 max_epoch = epoch_i
                 print(
-                    f"Current maximum fscore by test fscore: epoch {max_epoch}({max_fscore:.2f}%)"
+                    f"\nCurrent maximum fscore by test fscore: epoch {max_epoch}({max_fscore:.2f}%)"
+                )
+                print(
+                    f"Current maximum fscore by train fscore: epoch {max_epoch}({fscore_train:.2f}%)"
                 )
 
                 ckpt_path = os.path.join(self.config.model_dir, f"epoch-{epoch_i}.pt")
