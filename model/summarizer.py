@@ -87,9 +87,9 @@ class Sum(nn.Module):
             list_segments.append(seg_feat)
         if debug:
             print("segment shape:")
-            print(len(list_segments))
-            for seg in list_segments:
-                print(seg.shape)
+            # print(len(list_segments))
+            # for seg in list_segments:
+            #     print(seg.shape)
 
         ## SEGMENT EMBEDDING
         # start = time.time()
@@ -151,10 +151,10 @@ class Sum(nn.Module):
         # print(y.shape)
 
         y = y.view(1, -1)
-        print(y)
+        # print(y)
         # y = torch.where(y > 0.5, y / y, y - y)
-        y = torch.round(y, decimals=0)
-        print(y)
+        # y = torch.round(y, decimals=0)
+        # print(y)
 
         # print("Y:", y)
         # print("Y shape:", y.shape)

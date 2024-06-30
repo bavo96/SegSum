@@ -18,6 +18,7 @@ evaluation/
 # inference folder
 inference/pretrained_models/
 inference/best_models/
+inference/new_model/
 
 # results' folders
 results/
@@ -25,3 +26,8 @@ Training_Results/
 paper_final_results/
 
 .ipynb_checkpoints
+
+# temp file
+*temp*
+*.pt
+*.pem

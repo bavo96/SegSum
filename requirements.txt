@@ -1,3 +1,5 @@
-h5py
+h5py==3.11.0
 torch
 scipy
+opencv-python
+moviepy

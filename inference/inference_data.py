@@ -168,8 +168,8 @@ if __name__ == "__main__":
     )
 
     args = vars(parser.parse_args())
-    # dataset = "TVSum"  # args["dataset"]
-    dataset = "SumMe"  # args["dataset"]
+    dataset = "TVSum"  # args["dataset"]
+    # dataset = "SumMe"  # args["dataset"]
     corr_coef = False  # args["corr_coef"]
     eval_metric = "avg" if dataset.lower() == "tvsum" else "max"
     print(f"Dataset: {dataset}, eval_metric: {eval_metric}")
@@ -200,29 +200,29 @@ if __name__ == "__main__":
     for seed in range(1, 11):
         # if seed != 2:
         #     continue
-        if dataset == "SumMe":
-            if seed != 6:
-                continue
-        elif dataset == "TVSum":
-            if seed != 2:
-                continue
+        # if dataset == "SumMe":
+        #     if seed != 6:
+        #         continue
+        # elif dataset == "TVSum":
+        #     if seed != 1:
+        #         continue
         print(f"seed: {seed}")
         l_precision, l_recall, l_fscore = [], [], []
         for split_id in range(5):
-            if dataset == "SumMe":
-                if split_id != 2:
-                    continue
-            elif dataset == "TVSum":
-                if split_id != 0:
-                    continue
+            # if dataset == "SumMe":
+            #     if split_id != 2:
+            #         continue
+            # elif dataset == "TVSum":
+            #     if split_id != 4:
+            #         continue
 
             # Model data
-            # model_path = (
-            #     f"./inference/best_models/{dataset}/{seed}/models/split{split_id}"
-            # )
             model_path = (
-                f"./inference/new_model/{dataset}/{seed}/models/split{split_id}"
+                f"./inference/best_models/{dataset}/{seed}/models/split{split_id}"
             )
+            # model_path = (
+            #     f"./inference/new_model/{dataset}/{seed}/models/split{split_id}"
+            # )
             print(f"Model path: {model_path}")
             model_file = max(
                 [
@@ -238,8 +238,8 @@ if __name__ == "__main__":
             split_file = f"./data/splits/{dataset.lower()}_splits.json"
             with open(split_file) as f:
                 data = json.loads(f.read())
-                keys = data[split_id]["train_keys"]
-                # keys = data[split_id]["test_keys"]
+                # keys = data[split_id]["train_keys"]
+                keys = data[split_id]["test_keys"]
 
             # Create model with paper reported configuration
             # For SumMe

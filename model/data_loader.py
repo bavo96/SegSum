@@ -101,7 +101,7 @@ if __name__ == "__main__":
     # LOAD MANDATORY DATA
     # Load features
     print(f"Training on {dataset_name} dataset...")
-    print(f"Get features of original video...")
+    print("Get features of original video...")
     print(f"Features path: {config.features_path}")
     raw_video_features = pickle.load(open(config.features_path, "rb"))
     # Load dataset

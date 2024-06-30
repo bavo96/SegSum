@@ -181,8 +181,8 @@ class Solver(object):
                 )
                 self.optimizer.step()
                 self.scheduler.step()
-                for param_group in self.optimizer.param_groups:
-                    print(param_group["lr"])
+                # for param_group in self.optimizer.param_groups:
+                # print(param_group["lr"])
 
                 # end = time.time() - start
                 # print(f"compute optimizer {end}")
