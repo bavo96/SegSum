@@ -190,31 +190,40 @@ if __name__ == "__main__":
     dataset_path = f"./data/{dataset}/eccv16_dataset_{dataset.lower()}_google_pool5.h5"
     hdf = h5py.File(dataset_path, "r")  # Open hdf file
 
+    # OLD VALUES
     # SumMe: max method, sigma=0.3, seed=6, blocksize = 1, split 2
     # TVSum: avg method, sigma=0.9, seed=2, blocksize = 2, split 4
+
+    # LATEST VALUES
+    # SumMe: max method, sigma=0.3, seed=2, blocksize = 1, split 2
+    # TVSum: avg method, sigma=0.9, seed=4, blocksize = 2, split 4
 
     seed_pred, seed_rec, seed_fscore = [], [], []
 
     max_seed, max_value = -1, 0
 
     for seed in range(1, 11):
-        # if seed != 2:
-        #     continue
         # if dataset == "SumMe":
         #     if seed != 6:
         #         continue
         # elif dataset == "TVSum":
-        #     if seed != 1:
+        #     if seed != 2:
         #         continue
+        if dataset == "SumMe":
+            if seed != 2:
+                continue
+        elif dataset == "TVSum":
+            if seed != 4:
+                continue
         print(f"seed: {seed}")
         l_precision, l_recall, l_fscore = [], [], []
         for split_id in range(5):
-            # if dataset == "SumMe":
-            #     if split_id != 2:
-            #         continue
-            # elif dataset == "TVSum":
-            #     if split_id != 4:
-            #         continue
+            if dataset == "SumMe":
+                if split_id != 2:
+                    continue
+            elif dataset == "TVSum":
+                if split_id != 4:
+                    continue
 
             # Model data
             model_path = (

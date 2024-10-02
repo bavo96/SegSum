@@ -1,5 +1,10 @@
 h5py==3.11.0
-torch
-scipy
-opencv-python
-moviepy
+torch==2.0.1
+torchvision==0.15.2 
+torchaudio==2.0.2
+scipy==1.11.1
+opencv-python==4.9.0.80
+moviepy==1.0.3
+# pip uninstall PyQt5
+
+

@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy
 
-# dataset_name = "TVSum"
-dataset_name = "SumMe"
+dataset_name = "TVSum"
+# dataset_name = "SumMe"
 data_path = (
     f"./data/{dataset_name}/eccv16_dataset_{dataset_name.lower()}_google_pool5.h5"
 )
@@ -30,6 +30,11 @@ splits = json.loads(
 
 # SumMe: max method, sigma=0.3, seed=6, blocksize = 1, split 2
 # TVSum: max method, sigma=0.9, seed=2, blocksize = 2, split 4
+
+# if dataset_name == "SumMe":
+#     s = 2
+# elif dataset_name == "TVSum":
+#     s = 4
 
 if dataset_name == "SumMe":
     s = 2
@@ -295,16 +300,16 @@ if __name__ == "__main__":
 
     final_user_len_seg = sorted(final_user_len_seg)
     (n, bins, patches) = plt.hist(final_user_len_seg, bins=40, label="hst")
-    print("a")
-    print(n)
-    print("a")
-    print(bins)
-    print("a")
-    print(patches)
-    print("a")
     n_np, bins_np = np.histogram(final_len_seg, 10)
-    print(n_np, bins_np)
-    print("a")
+    # print("a")
+    # print(n)
+    # print("a")
+    # print(bins)
+    # print("a")
+    # print(patches)
+    # print("a")
+    # print(n_np, bins_np)
+    # print("a")
     # plt.savefig("./visualize/hist.jpeg")
 
 # if __name__ == "__main__":
