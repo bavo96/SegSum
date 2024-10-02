@@ -187,7 +187,7 @@ def inference(dataset, video_name, video_fullname):
 
 def gr_video_name_select(dataset, video_name):
     if dataset == "SumMe":
-        raw_video_fullname = "../../data/SumMe/videos/" + video_name + ".mp4"
+        raw_video_fullname = "../../data/SumMe/videos/" + video_name + ".webm"
     elif dataset == "TVSum":
         raw_video_fullname = (
             "../../data/tvsum50_ver_1_1/ydata-tvsum50-v1_1/ydata-tvsum50-video/video/"
@@ -196,9 +196,6 @@ def gr_video_name_select(dataset, video_name):
         )
     print(
         f"{video_name}, {raw_video_fullname}, {os.path.exists(raw_video_fullname)}",
-    )
-    print(
-        f"{raw_video_fullname}, {os.path.exists(raw_video_fullname)}",
     )
 
     return video_name, raw_video_fullname
@@ -251,13 +248,11 @@ def initialization(datasets):
 
         # Model data
         model_path = f"./inference/best_models/{dataset}/{seed}/models/split{split_id}"
-        model_file = max(
-            [
-                int(f.split(".")[0].split("-")[1])
-                for f in os.listdir(model_path)
-                if os.path.isfile(os.path.join(model_path, f))
-            ]
-        )
+        model_file = max([
+            int(f.split(".")[0].split("-")[1])
+            for f in os.listdir(model_path)
+            if os.path.isfile(os.path.join(model_path, f))
+        ])
         model_full_path = os.path.join(model_path, f"epoch-{model_file}.pt")
         print("Model's path:", model_full_path)
 
@@ -342,7 +337,7 @@ if __name__ == "__main__":
         with gr.Row():
             with gr.Column():
                 gr_full_video = gr.PlayableVideo(
-                    label="Full video", interactive=False, format="mp4", height=480
+                    label="Full video", interactive=False, height=480
                 )
                 gr_generate_summary = gr.Button(value="Generate summary")
             with gr.Column():
