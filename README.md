@@ -1,4 +1,6 @@
-# SegSum
+# SegSum 
+[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/integrate-the-temporal-scheme-for/unsupervised-video-summarization-on-tvsum)](https://paperswithcode.com/sota/unsupervised-video-summarization-on-tvsum?p=integrate-the-temporal-scheme-for) [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/integrate-the-temporal-scheme-for/unsupervised-video-summarization-on-summe)](https://paperswithcode.com/sota/unsupervised-video-summarization-on-summe?p=integrate-the-temporal-scheme-for)
+
 PyTorch Implementation of ***SegSum*** model in the paper ***Integrate the temporal scheme for unsupervised video summarization via attention mechanism*** [[Paper](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=10904447)] [[DOI](https://doi.org/10.1109/ACCESS.2025.3546149)] [[Cite](https://github.com/bavo96/SegSum#citation)]
 
 ## I. Prerequisites
