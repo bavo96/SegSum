@@ -1,5 +1,5 @@
 # SegSum
-PyTorch Implementation of SegSum in paper **Integrate the temporal scheme for unsupervised video summarization via attention mechanism**
+PyTorch Implementation of SegSum model in the paper **Integrate the temporal scheme for unsupervised video summarization via attention mechanism** [[Paper](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=10904447)] [[DOI](https://doi.org/10.1109/ACCESS.2025.3546149)] [[Cite](https://github.com/bavo96/SegSum#citation)]
 
 # Prerequisites
 - Python 3.10 \
@@ -33,6 +33,25 @@ To reproduce our training, run ```python -m train.search_params```
 
 # Evaluation
 To evaluate our best models, put the `best_models` in `inference` folder and run `python inference/inference_data.py`
+
+# Citation
+
+If you find our work, code or pretrained models, useful in your work, please cite the following publication:
+
+E. Apostolidis, G. Balaouras, V. Mezaris, I. Patras, "Summarizing Videos using Concentrated Attention and Considering the Uniqueness and Diversity of the Video Frames", Proc. of the 2022 Int. Conf. on Multimedia Retrieval (ICMR ’22), June 2022, Newark, NJ, USA.
+
+```
+@ARTICLE{10904447,
+  author={Bang, Vo Quoc and Viet, Vo Hoai},
+  journal={IEEE Access}, 
+  title={Integrate the Temporal Scheme for Unsupervised Video Summarization via Attention Mechanism}, 
+  year={2025},
+  volume={13},
+  number={},
+  pages={38147-38162},
+  keywords={Deep learning;Training;Attention mechanisms;Data models;Convolutional neural networks;Computer architecture;Transformers;Neurons;Kernel;Brain modeling;Video summarization;unsupervised learning;temporal video segmentation},
+  doi={10.1109/ACCESS.2025.3546149}}
+```
 
 ## Acknowledgement
 This repo is built mainly on the CA-SUM repo: (https://github.com/e-apostolidis/CA-SUM).
