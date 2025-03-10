@@ -49,7 +49,7 @@ python inference/inference_data.py
 ## V. Demo
 To run our demo, run 
 ```bash
-python app/app.py
+python web_app/app.py
 ```
 
 ## VI. Citation
