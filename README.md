@@ -5,7 +5,7 @@ PyTorch Implementation of ***SegSum*** model in the paper ***Integrate the tempo
 
 ## I. Prerequisites
 - Python 3.10 
-- Install requirements ```pip install -r requirements.txt```
+- ```pip install -r requirements.txt```
 
 ## II. Data
 Pretrained models and training/test data are available [here](https://drive.google.com/drive/folders/1IXWNZTc2LbIPmhR7VpysDHO-LaCjHesg?usp=sharing). This link has 2 folders:
