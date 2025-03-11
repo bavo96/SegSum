@@ -43,13 +43,13 @@ python -m train.search_params
 ```
 
 ## IV. Evaluation
-To evaluate our best models, put the `best_models` in `inference` folder and run 
+To evaluate, put the `best_models` in `inference` folder and run 
 ```bash 
 python inference/inference_data.py
 ```
 
 ## V. Demo
-To run our demo, run 
+To run demo 
 ```bash
 python web_app/app.py
 ```
